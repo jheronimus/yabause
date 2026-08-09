@@ -1,0 +1,9 @@
+{
+  "major": 1,
+  "minor": 20,
+  "patch": 32,
+  "code": 349,
+  "releaseNotes": {
+    "ja": "- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: 起動しない問題を修正\n- EMIT Vol.1: セリフの表示中に画面全体が暗くなる問題を修正\n- EMIT Vol.1: 音声が途中で途切れる問題を修正\n- DEEP FEAR: ゲーム中のムービーが真っ黒になる問題を修正\n- GOLDEN AXE THE DUEL: キャラクターの表示が乱れる問題を修正\n- SONIC JAM: キャラクターの動きがカクつく問題を修正 (欧州版)"
+  }
+}
