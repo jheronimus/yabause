@@ -1,0 +1,88 @@
+<en-US>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: fixed the games not booting
+- EMIT Vol.1: fixed the whole screen dimming while dialogue is shown
+- EMIT Vol.1: fixed voices cutting out partway through
+- DEEP FEAR: fixed in-game movies showing a black screen
+- GOLDEN AXE THE DUEL: fixed corrupted character graphics
+- SONIC JAM: fixed stuttering character movement (European version)
+</en-US>
+<de-DE>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: Startproblem behoben
+- EMIT Vol.1: Abdunkeln des gesamten Bildschirms bei Dialogen behoben
+- EMIT Vol.1: Abbrechende Sprachausgabe behoben
+- DEEP FEAR: Schwarzes Bild bei Videos im Spiel behoben
+- GOLDEN AXE THE DUEL: Fehlerhafte Charakterdarstellung behoben
+- SONIC JAM: Ruckelnde Charakterbewegung behoben (Europa-Version)
+</de-DE>
+<es-419>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: se corrigió que no arrancaran
+- EMIT Vol.1: se corrigió el oscurecimiento de toda la pantalla en los diálogos
+- EMIT Vol.1: se corrigió el audio que se cortaba a la mitad
+- DEEP FEAR: se corrigió la pantalla negra en los videos del juego
+- GOLDEN AXE THE DUEL: se corrigieron los gráficos dañados de los personajes
+- SONIC JAM: se corrigió el movimiento entrecortado de los personajes (versión europea)
+</es-419>
+<es-ES>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: corregido que no arrancaran
+- EMIT Vol.1: corregido el oscurecimiento de toda la pantalla en los diálogos
+- EMIT Vol.1: corregido el audio que se cortaba a la mitad
+- DEEP FEAR: corregida la pantalla negra en los vídeos del juego
+- GOLDEN AXE THE DUEL: corregidos los gráficos dañados de los personajes
+- SONIC JAM: corregido el movimiento entrecortado de los personajes (versión europea)
+</es-ES>
+<fr-FR>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER : correction du démarrage impossible
+- EMIT Vol.1 : correction de l'assombrissement de tout l'écran pendant les dialogues
+- EMIT Vol.1 : correction des coupures de voix
+- DEEP FEAR : correction de l'écran noir dans les vidéos du jeu
+- GOLDEN AXE THE DUEL : correction de l'affichage corrompu des personnages
+- SONIC JAM : correction des saccades dans les mouvements des personnages (version européenne)
+</fr-FR>
+<id>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: memperbaiki gim yang tidak bisa dijalankan
+- EMIT Vol.1: memperbaiki seluruh layar yang menggelap saat dialog tampil
+- EMIT Vol.1: memperbaiki suara yang terputus di tengah
+- DEEP FEAR: memperbaiki video dalam gim yang tampil hitam
+- GOLDEN AXE THE DUEL: memperbaiki grafis karakter yang rusak
+- SONIC JAM: memperbaiki gerakan karakter yang tersendat (versi Eropa)
+</id>
+<it-IT>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: risolto l'avvio impossibile
+- EMIT Vol.1: risolto l'oscuramento dell'intero schermo durante i dialoghi
+- EMIT Vol.1: risolta l'interruzione delle voci
+- DEEP FEAR: risolto lo schermo nero nei filmati di gioco
+- GOLDEN AXE THE DUEL: risolta la grafica dei personaggi corrotta
+- SONIC JAM: risolto il movimento a scatti dei personaggi (versione europea)
+</it-IT>
+<ja-JP>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: 起動しない問題を修正
+- EMIT Vol.1: セリフの表示中に画面全体が暗くなる問題を修正
+- EMIT Vol.1: 音声が途中で途切れる問題を修正
+- DEEP FEAR: ゲーム中のムービーが真っ黒になる問題を修正
+- GOLDEN AXE THE DUEL: キャラクターの表示が乱れる問題を修正
+- SONIC JAM: キャラクターの動きがカクつく問題を修正 (欧州版)
+</ja-JP>
+<pt-BR>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: corrigido o não iniciar dos jogos
+- EMIT Vol.1: corrigido o escurecimento de toda a tela nos diálogos
+- EMIT Vol.1: corrigido o áudio interrompido no meio
+- DEEP FEAR: corrigida a tela preta nos vídeos do jogo
+- GOLDEN AXE THE DUEL: corrigidos os gráficos corrompidos dos personagens
+- SONIC JAM: corrigido o movimento travado dos personagens (versão europeia)
+</pt-BR>
+<th>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: แก้ไขปัญหาเกมไม่เริ่มทำงาน
+- EMIT Vol.1: แก้ไขปัญหาหน้าจอทั้งหมดมืดลงขณะแสดงบทสนทนา
+- EMIT Vol.1: แก้ไขปัญหาเสียงขาดหายกลางคัน
+- DEEP FEAR: แก้ไขปัญหาวิดีโอในเกมเป็นจอดำ
+- GOLDEN AXE THE DUEL: แก้ไขปัญหากราฟิกตัวละครผิดเพี้ยน
+- SONIC JAM: แก้ไขปัญหาการเคลื่อนไหวของตัวละครกระตุก (เวอร์ชันยุโรป)
+</th>
+<zh-CN>
+- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER：修复了无法启动的问题
+- EMIT Vol.1：修复了显示对话时整个画面变暗的问题
+- EMIT Vol.1：修复了语音中途中断的问题
+- DEEP FEAR：修复了游戏内动画显示黑屏的问题
+- GOLDEN AXE THE DUEL：修复了角色显示错乱的问题
+- SONIC JAM：修复了角色动作卡顿的问题（欧版）
+</zh-CN>
