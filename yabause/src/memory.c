@@ -213,12 +213,18 @@ void * YabMemMap(char * filename, u32 size ) {
   char *p;
   int fd;
 
+  // FILE_SHARE_WRITE as well: this handle stays open for the whole session,
+  // and sharing only reads used to make every later open-for-write of the
+  // backup file fail with a sharing violation, so a second emulator
+  // instance could not boot. Concurrent instances share the file at their
+  // own risk (same as other ports; Windows keeps views of the same file
+  // coherent across processes).
   hFile = CreateFileA(
-    filename, 
-    GENERIC_READ|GENERIC_WRITE, 
-    FILE_SHARE_READ,
-    0, 
-    OPEN_EXISTING, 
+    filename,
+    GENERIC_READ|GENERIC_WRITE,
+    FILE_SHARE_READ|FILE_SHARE_WRITE,
+    0,
+    OPEN_EXISTING,
     FILE_ATTRIBUTE_NORMAL,
     0);
   if (INVALID_HANDLE_VALUE == hFile) {
@@ -230,15 +236,22 @@ void * YabMemMap(char * filename, u32 size ) {
     return NULL;
   }
 
+  // Unnamed mapping: the old session-global name "BACKUP" made a second
+  // instance silently attach to the first instance's mapping object (wrong
+  // file when the instances use different backup paths).
   hFMWrite = CreateFileMapping(
     hFile,
     NULL,
     PAGE_READWRITE,
     0,
     size,
-    "BACKUP");
-  if (hFMWrite == INVALID_HANDLE_VALUE)
+    NULL);
+  // CreateFileMapping reports failure with NULL, not INVALID_HANDLE_VALUE.
+  if (hFMWrite == NULL) {
+    CloseHandle(hFile);
+    hFile = INVALID_HANDLE_VALUE;
     return NULL;
+  }
 
   return MapViewOfFile(hFMWrite, FILE_MAP_ALL_ACCESS, 0, 0, size);
 }

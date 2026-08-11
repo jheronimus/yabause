@@ -867,16 +867,20 @@ void FASTCALL AddressArrayWriteLong(u32 addr, u32 val)
 u8 FASTCALL DataArrayReadByte(u32 addr)
 {
 #ifdef CACHE_ENABLE
-  if (CurrentSH2->onchip.cache.enable) {
-    int way = (addr >> 10) & 3;
-    int entry = (addr >> 4) & 0x3f;
-    u8 data = CurrentSH2->onchip.cache.way[entry].data[way][addr & 0xf];
-    CACHE_LOG(cache_f, "[SH2-%s] DataArrayReadByte %08X %d:%d:%d %08X\n", CurrentSH2->isslave ? "S" : "M", addr, entry, way, addr & 0x0F, data);
-    return data;
-  }
-  else {
-    return T2ReadByte(CurrentSH2->DataArray, addr & 0xFFF);
-  }
+  // The data array is on-chip RAM: its contents do not depend on CCR.CE, and
+  // every other data array accessor (read word/long, write byte/word/long)
+  // stores it in cache.way[].data unconditionally. Branching on
+  // cache.enable here read a different buffer than the writes had filled, so a
+  // byte written while the cache was off read back as garbage. Games that keep
+  // scratch data (or the stack) in the data array and toggle CCR around it lose
+  // it: Layer Section II does a CCR read-modify-write through a stack byte at
+  // 0xC00007E8 while CE is cleared, so it lost the TW bit and its slave stack
+  // in the two-way RAM was then destroyed by cache line fills.
+  int way = (addr >> 10) & 3;
+  int entry = (addr >> 4) & 0x3f;
+  u8 data = CurrentSH2->onchip.cache.way[entry].data[way][addr & 0xf];
+  CACHE_LOG(cache_f, "[SH2-%s] DataArrayReadByte %08X %d:%d:%d %08X\n", CurrentSH2->isslave ? "S" : "M", addr, entry, way, addr & 0x0F, data);
+  return data;
 #else
   return T2ReadByte(CurrentSH2->DataArray, addr & 0xFFF);
 #endif

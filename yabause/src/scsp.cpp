@@ -2148,8 +2148,22 @@ int scsp_debug_get_mvol(){
 static union {
    u8 data[CDDA_NUM_BUFFERS*2352];
 } cddabuf;
-static unsigned int cdda_next_in=0;               // Next sector buffer offset to receive into
-static u32 cdda_out_left;                       // Bytes of CDDA left to output
+// The CD block hands sectors over from the emulation thread while the SCSP
+// consumes them from its own thread, so this is a single-producer /
+// single-consumer ring and has to be published as one. It used to be a plain
+// byte count that both sides read-modify-wrote (+2352 on one thread, -4 on the
+// other) with no synchronisation at all: increments were lost, and every lost
+// one dropped a whole sector, i.e. 13ms of audio, straight out of the stream.
+//
+// Each position below is written by exactly one side. The two totals are
+// monotonic (they wrap with u32, which is fine - only their difference is ever
+// used), and the release/acquire pair on them is what publishes the sector
+// bytes themselves, so the memcpy no longer races the reader either.
+static u32 cdda_in_pos = 0;                     // write offset, producer only
+static u32 cdda_out_pos = 0;                    // read offset, consumer only
+static std::atomic<u32> cdda_written(0);        // total bytes handed to the ring
+static std::atomic<u32> cdda_read(0);           // total bytes played out
+
 
 ////////////////////////////////////////////////////////////////
 
@@ -4398,10 +4412,13 @@ scsp_update (s32 *bufL, s32 *bufR, u32 len)
       [(slot->dislr == 31) ? 0 : 1](slot);
    }
 
-   if (cdda_out_left > 0)
+   u32 cdda_pos = cdda_read.load(std::memory_order_relaxed);
+   u32 cdda_avail = cdda_written.load(std::memory_order_acquire) - cdda_pos;
+
+   if (cdda_avail > 0)
    {
-      if (len > cdda_out_left / 4)
-         scsp_buf_len = cdda_out_left / 4;
+      if (len > cdda_avail / 4)
+         scsp_buf_len = cdda_avail / 4;
       else
          scsp_buf_len = len;
 
@@ -4410,14 +4427,12 @@ scsp_update (s32 *bufL, s32 *bufR, u32 len)
       /* May need to wrap around the buffer, so use nested loops */
       while (scsp_buf_pos < scsp_buf_len)
       {
-         s32 temp = cdda_next_in - cdda_out_left;
-         s32 outpos = (temp < 0) ? temp + sizeof(cddabuf.data) : temp;
-         u8 *buf = &cddabuf.data[outpos];
+         u8 *buf = &cddabuf.data[cdda_out_pos];
 
          u32 scsp_buf_target;
          u32 this_len = scsp_buf_len - scsp_buf_pos;
-         if (this_len > (sizeof(cddabuf.data) - outpos) / 4)
-            this_len = (sizeof(cddabuf.data) - outpos) / 4;
+         if (this_len > (sizeof(cddabuf.data) - cdda_out_pos) / 4)
+            this_len = (sizeof(cddabuf.data) - cdda_out_pos) / 4;
          scsp_buf_target = scsp_buf_pos + this_len;
 
          for (; scsp_buf_pos < scsp_buf_target; scsp_buf_pos++, buf += 4)
@@ -4435,7 +4450,12 @@ scsp_update (s32 *bufL, s32 *bufR, u32 len)
                scsp_bufR[scsp_buf_pos] += out;
          }
 
-         cdda_out_left -= this_len * 4;
+         cdda_out_pos += this_len * 4;
+         if (cdda_out_pos >= sizeof(cddabuf.data))
+            cdda_out_pos = 0;
+
+         cdda_pos += this_len * 4;
+         cdda_read.store(cdda_pos, std::memory_order_release);
       }
    }
    else if (Cs2Area->isaudio)
@@ -5864,22 +5884,29 @@ void M68KExec(s32 cycles)
 
 void new_scsp_run_sample()
 {
-   s32 temp = cdda_next_in - cdda_out_left;
-   s32 outpos = (temp < 0) ? temp + sizeof(cddabuf.data) : temp;
-   u8 *buf = &cddabuf.data[outpos];
-
    s16 out_l = 0;
    s16 out_r = 0;
 
    s16 cd_in_l = 0;
    s16 cd_in_r = 0;
 
-   if ((s32)cdda_out_left > 0)
+   // Acquire: pairs with the producer's release store, so the sector bytes
+   // below cdda_written are visible before they are read.
+   u32 cdda_pos = cdda_read.load(std::memory_order_relaxed);
+   u32 cdda_avail = cdda_written.load(std::memory_order_acquire) - cdda_pos;
+
+   if (cdda_avail >= 4)
    {
+      const u8 *buf = &cddabuf.data[cdda_out_pos];
+
       cd_in_l = (s16)((buf[1] << 8) | buf[0]);
       cd_in_r = (s16)((buf[3] << 8) | buf[2]);
 
-      cdda_out_left -= 4;
+      cdda_out_pos += 4;
+      if (cdda_out_pos >= sizeof(cddabuf.data))
+         cdda_out_pos = 0;
+
+      cdda_read.store(cdda_pos + 4, std::memory_order_release);
    }
 
    scsp_update_timer(1);
@@ -6010,19 +6037,25 @@ ScspReceiveCDDA (const u8 *sector)
    // the boost was active. An underrun simply plays silence, which is also
    // what the real SCSP outputs while the drive seeks.
 
-  memcpy(cddabuf.data+cdda_next_in, sector, 2352);
-  if (sizeof(cddabuf.data)-cdda_next_in <= 2352)
-     cdda_next_in = 0;
-  else
-     cdda_next_in += 2352;
+  u32 written = cdda_written.load(std::memory_order_relaxed);
+  u32 used = written - cdda_read.load(std::memory_order_acquire);
 
-  cdda_out_left += 2352;
-
-  if (cdda_out_left > sizeof(cddabuf.data))
+  if (used > sizeof(cddabuf.data) - 2352)
     {
+      // Dropping the incoming sector rather than overwriting the oldest one:
+      // the reader owns everything below cdda_written, and moving that line
+      // under it is what the old clamp did.
       SCSPLOG ("WARNING: CDDA buffer overrun\n");
-      cdda_out_left = sizeof(cddabuf.data);
+      return;
     }
+
+  memcpy(cddabuf.data+cdda_in_pos, sector, 2352);
+  cdda_in_pos += 2352;
+  if (cdda_in_pos >= sizeof(cddabuf.data))
+     cdda_in_pos = 0;
+
+  // Release: publishes the sector bytes written above to the consumer.
+  cdda_written.store(written + 2352, std::memory_order_release);
 }
 
 
@@ -6706,7 +6739,13 @@ SoundSaveState (FILE *fp)
   u8 nextphase;
   IOCheck_struct check = { 0, 0 };
 
-  offset = StateWriteHeader (fp, "SCSP", 5);
+  offset = StateWriteHeader (fp, "SCSP", 6);
+
+  // Flush the staged SH2 sound RAM burst FIFO first. Those writes have already
+  // completed from the SH2's point of view, so the SoundRam image written below
+  // must contain them (this is one of the FIFO's regular flush points, like a
+  // sound RAM read or the per-frame handshake).
+  Sh2SramFifoCommit();
 
   // Save 68k registers first
   ywrite (&check, (void *)&IsM68KRunning, 1, 1, fp);
@@ -6953,8 +6992,15 @@ SoundSaveState (FILE *fp)
   ywrite(&check, (void *)&ScspInternalVars->scsptiming1, sizeof(u32), 1, fp);
   ywrite(&check, (void *)&ScspInternalVars->scsptiming2, sizeof(u32), 1, fp);
 
-  ywrite(&check, (void *)&cdda_next_in, sizeof(u32), 1, fp);
-  ywrite(&check, (void *)&cdda_out_left, sizeof(u32), 1, fp);
+  {
+    // Same two fields as before the ring became lock-free: the write offset
+    // and how many bytes are still queued, so the save format is unchanged.
+    u32 saved_in = cdda_in_pos;
+    u32 saved_left = cdda_written.load(std::memory_order_relaxed) -
+                     cdda_read.load(std::memory_order_relaxed);
+    ywrite(&check, (void *)&saved_in, sizeof(u32), 1, fp);
+    ywrite(&check, (void *)&saved_left, sizeof(u32), 1, fp);
+  }
   ywrite(&check, (void *)&scsp_mute_flags, sizeof(u32), 1, fp);
   ywrite(&check, (void *)&scspsoundlen, sizeof(u32), 1, fp);
   ywrite(&check, (void *)&scsplines, sizeof(u32), 1, fp);
@@ -6963,6 +7009,25 @@ SoundSaveState (FILE *fp)
   ywrite(&check, (void *)&scspsoundgenpos, sizeof(u32), 1, fp);
   ywrite(&check, (void *)&scspsoundoutleft, sizeof(u32), 1, fp);
   ywrite(&check, (void *)&new_scsp_outbuf_pos, sizeof(int), 1, fp);
+
+  // Version 6: state the scsp3-derived pipeline added on top of the per-field
+  // slot serialization above. Without it a reloaded state runs with a wrong
+  // short-wave wrap, a lost loop/key-on link and a desynced FM modulation ring
+  // until the game happens to rewrite the slot.
+  for (i = 0; i < 32; i++)
+    {
+      ywrite(&check, (void *)&new_scsp.slots[i].regs.shortwave, sizeof(u8), 1, fp);
+      ywrite(&check, (void *)&new_scsp.slots[i].state.sample_frac, sizeof(u32), 1, fp);
+      ywrite(&check, (void *)&new_scsp.slots[i].state.lfo_time_counter, sizeof(u32), 1, fp);
+      ywrite(&check, (void *)&new_scsp.slots[i].state.in_loop, sizeof(int), 1, fp);
+      ywrite(&check, (void *)&new_scsp.slots[i].state.eg_keyon_skip, sizeof(int), 1, fp);
+      ywrite(&check, (void *)&new_scsp.slots[i].state.read_phase_frac, sizeof(u32), 1, fp);
+      ywrite(&check, (void *)&new_scsp.slots[i].state.wave_index, sizeof(s32), 1, fp);
+    }
+  ywrite(&check, (void *)new_scsp.sound_stack_delayer, sizeof(s16), 4, fp);
+  ywrite(&check, (void *)&new_scsp.global_counter, sizeof(u32), 1, fp);
+  ywrite(&check, (void *)&new_scsp.frame, sizeof(u32), 1, fp);
+  ywrite(&check, (void *)&new_scsp_lfsr, sizeof(u32), 1, fp);
 
   g_scsp_lock = 0;
 
@@ -6980,7 +7045,11 @@ SoundLoadState (FILE *fp, int version, int size)
   IOCheck_struct check = { 0, 0 };
 
   LOG("--------------- SoundLoadState ----------------");
-  
+
+  // Drain the staged SH2 sound RAM burst FIFO before anything is restored.
+  // Those writes belong to the pre-load timeline; left pending they would be
+  // committed into the freshly loaded SoundRam and corrupt it.
+  Sh2SramFifoCommit();
 
   // Read 68k registers first
   yread(&check, (void *)&IsM68KRunning, 1, 1, fp);
@@ -7285,8 +7354,19 @@ SoundLoadState (FILE *fp, int version, int size)
     yread(&check, (void *)&ScspInternalVars->scsptiming2, sizeof(u32), 1, fp);
 
     if (version >= 3) {
-      yread(&check, (void *)&cdda_next_in, sizeof(u32), 1, fp);
-      yread(&check, (void *)&cdda_out_left, sizeof(u32), 1, fp);
+      {
+        u32 saved_in = 0, saved_left = 0;
+        yread(&check, (void *)&saved_in, sizeof(u32), 1, fp);
+        yread(&check, (void *)&saved_left, sizeof(u32), 1, fp);
+        if (saved_in >= sizeof(cddabuf.data)) saved_in = 0;
+        if (saved_left > sizeof(cddabuf.data)) saved_left = sizeof(cddabuf.data);
+        cdda_in_pos = saved_in;
+        cdda_out_pos = (saved_in >= saved_left)
+                       ? (saved_in - saved_left)
+                       : (u32)(saved_in + sizeof(cddabuf.data) - saved_left);
+        cdda_read.store(0, std::memory_order_relaxed);
+        cdda_written.store(saved_left, std::memory_order_relaxed);
+      }
       yread(&check, (void *)&scsp_mute_flags, sizeof(u32), 1, fp);
       yread(&check, (void *)&scspsoundlen, sizeof(u32), 1, fp);
       yread(&check, (void *)&scsplines, sizeof(u32), 1, fp);
@@ -7302,6 +7382,43 @@ SoundLoadState (FILE *fp, int version, int size)
       scspsoundgenpos = 0;
       scspsoundoutleft = 0;
       new_scsp_outbuf_pos = 0;
+    }
+
+    // Version 6: new pipeline slot/global state (see SoundSaveState). Older
+    // states carry none of it, so clear it to the post-reset values instead of
+    // leaving whatever the pre-load session happened to have.
+    if (version >= 6) {
+      for (i = 0; i < 32; i++)
+        {
+          yread(&check, (void *)&new_scsp.slots[i].regs.shortwave, sizeof(u8), 1, fp);
+          yread(&check, (void *)&new_scsp.slots[i].state.sample_frac, sizeof(u32), 1, fp);
+          yread(&check, (void *)&new_scsp.slots[i].state.lfo_time_counter, sizeof(u32), 1, fp);
+          yread(&check, (void *)&new_scsp.slots[i].state.in_loop, sizeof(int), 1, fp);
+          yread(&check, (void *)&new_scsp.slots[i].state.eg_keyon_skip, sizeof(int), 1, fp);
+          yread(&check, (void *)&new_scsp.slots[i].state.read_phase_frac, sizeof(u32), 1, fp);
+          yread(&check, (void *)&new_scsp.slots[i].state.wave_index, sizeof(s32), 1, fp);
+        }
+      yread(&check, (void *)new_scsp.sound_stack_delayer, sizeof(s16), 4, fp);
+      yread(&check, (void *)&new_scsp.global_counter, sizeof(u32), 1, fp);
+      yread(&check, (void *)&new_scsp.frame, sizeof(u32), 1, fp);
+      yread(&check, (void *)&new_scsp_lfsr, sizeof(u32), 1, fp);
+      if (new_scsp_lfsr == 0)
+        new_scsp_lfsr = 1;  // a zero LFSR would latch the noise source off
+    } else {
+      for (i = 0; i < 32; i++)
+        {
+          new_scsp.slots[i].regs.shortwave = 0;
+          new_scsp.slots[i].state.sample_frac = 0;
+          new_scsp.slots[i].state.lfo_time_counter = 0;
+          new_scsp.slots[i].state.in_loop = 0;
+          new_scsp.slots[i].state.eg_keyon_skip = 0;
+          new_scsp.slots[i].state.read_phase_frac = 0;
+          new_scsp.slots[i].state.wave_index = 0;
+        }
+      memset(new_scsp.sound_stack_delayer, 0, sizeof(new_scsp.sound_stack_delayer));
+      new_scsp.global_counter = 0;
+      new_scsp.frame = 0;
+      new_scsp_lfsr = 1;
     }
 
     // ========== Post-load initialization ==========

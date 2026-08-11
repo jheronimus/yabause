@@ -644,6 +644,19 @@ typedef struct {
   // clear so each real edge produces a handler run.
   // Transient timing state; deliberately not serialized in save states.
   u32 frtIcMergedEdges;
+
+  // Set while an ICI handler run is still owed for the currently latched ICF,
+  // i.e. an ICI was raised for it and no FTCSR clear has retired it yet.
+  // Merged edges are banked only while this is set. TIER.ICIE cannot be used
+  // for that test: an ICI handler routinely masks ICIE as its first act, and
+  // a doorbell arriving inside that window must still be banked (Gungriffon II
+  // deadlocks on exactly one such edge). A CPU that never raised an ICI has no
+  // late handler to compensate for, so it never banks and keeps the hardware
+  // level-flag semantics that polling flow control depends on (Azel).
+  // Serialized from state version 7. Older states only carry
+  // frtIcMergedEdges, from which this is approximated - badly, because the
+  // common case is owed with an empty bank.
+  u8 frtIcIntOwed;
   void *ext;
 
   // IF/MA contention approximation state (cycle-cost accuracy Phase 2).

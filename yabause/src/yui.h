@@ -34,16 +34,15 @@ extern "C"{
 #endif
 
 /* If Yabause encounters any fatal errors, it sends the error text to this function */
- void YuiErrorMsg(const char *string);
+void YuiErrorMsg(const char *string);
 
 /* Logging callback; the libretro glue maps this to the RetroArch log interface.
    Declared here because the core's renderer files call it under __LIBRETRO__. */
- void YuiMsg(const char *format, ...);
+void YuiMsg(const char *format, ...);
 
 /* Current frontend framebuffer; the libretro glue returns the HW render
    context's current framebuffer.  Declared for the GLES renderer. */
- int YuiGetFB(void);
-
+int YuiGetFB(void);
 
 /* Tells the yui to exchange front and back video buffers. This may end
    up being moved to the Video Core. */

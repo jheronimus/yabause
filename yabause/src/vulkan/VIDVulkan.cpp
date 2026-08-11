@@ -5370,6 +5370,12 @@ void VIDVulkan::drawRotation(RBGDrawInfo *rbg, VdpPipeline **pipleLine) {
     rbg->hres = rbg->hres * rbg->rotate_mval_h;
     rbg->vres = rbg->vres * rbg->rotate_mval_v;
     break;
+  case RBG_RES_4x:
+    rbg->rotate_mval_h = 4.0f;
+    rbg->rotate_mval_v = 4.0f;
+    rbg->hres = rbg->hres * rbg->rotate_mval_h;
+    rbg->vres = rbg->vres * rbg->rotate_mval_v;
+    break;
   case RBG_RES_720P:
     rbg->rotate_mval_h = 1280.0f / rbg->hres;
     rbg->rotate_mval_v = 720.0f / rbg->vres;
@@ -7379,6 +7385,35 @@ void VIDVulkan::drawPattern(vdp2draw_struct *info, CharTexture *texture, int x, 
   u64 cacheaddr = ((u32)(info->alpha >> 3) << 27) | (info->paladdr << 20) | info->charaddr | info->transparencyenable |
                   ((info->patternpixelwh >> 4) << 1) | (((u64)(info->coloroffset >> 8) & 0x07) << 32);
 
+  // issue #22 special priority (SFPRMD mode 1/2): setSpecialPriority bakes the
+  // resulting per-character priority into the decoded texture's B channel, and
+  // that value depends on the *pattern name* bits (specialfunction) and on the
+  // layer priority -- neither of which is part of the character pattern itself.
+  // A cache hit skips drawCell entirely, so without these bits in the key every
+  // map cell sharing a character pattern inherits the priority baked for the
+  // first cell that decoded it. In Sonic 3D's Green Grove that made whole floor
+  // tiles inherit specialfunction = 1 (priority 2 -> 3) and swallow Sonic.
+  if (info->specialprimode != 0) {
+    cacheaddr |= ((u64)((info->priority & 0xE) >> 1) << 35) | ((u64)(info->specialfunction & 1) << 38);
+  }
+
+  // Special color calculation (SFCCMD): getAlpha() bakes "is color calculation
+  // enabled for this dot" into the decoded texture's alpha, and for modes 1 and
+  // 2 that answer comes from info->specialcolorfunction -- a pattern *name*
+  // bit, i.e. per map cell, not per character pattern. The key above only
+  // describes the character pattern, and a cache hit skips drawCell entirely,
+  // so every cell sharing a pattern would inherit the alpha baked for whichever
+  // cell decoded it first. Mode 2 additionally compares the dot against the
+  // layer's special function code; mode 3 reads the CRAM color MSB only and so
+  // needs nothing here. Layers that do not use SFCCMD keep the same key as
+  // before, so the cache only splits where the bake actually differs.
+  if (info->specialcolormode != 0) {
+    cacheaddr |= ((u64)(info->specialcolormode & 0x3) << 39) | ((u64)(info->specialcolorfunction & 1) << 41);
+    if (info->specialcolormode == 2) {
+      cacheaddr |= ((u64)(info->specialcode & 0xFF) << 42);
+    }
+  }
+
   TextureCache c;
   vdp2draw_struct tile = {};
   int winmode = 0;
@@ -7397,6 +7432,19 @@ void VIDVulkan::drawPattern(vdp2draw_struct *info, CharTexture *texture, int x, 
   // and went translucent in the new composite. The texture alpha bake itself uses
   // info->specialcolormode directly, so the legacy path was unaffected.
   tile.specialcolormode = info->specialcolormode;
+  // issue #22: the per-tile `tile` struct must also carry the special PRIORITY
+  // mode (SFPRMD), for the same reason specialcolormode above does. genPolygon
+  // copies it into program->specialPriority, and the GBuffer companion only
+  // reads the per-character priority back from the decoded texture's B channel
+  // (baked by setSpecialPriority during drawCell, which uses the layer `info`
+  // and was therefore always correct) when that flag is non-zero. Left at 0 the
+  // new compositor reported the flat layer priority for every dot, so a mode-1
+  // layer could never rise above a sprite sharing its priority number -- Sonic
+  // 3D's Green Grove ground (NBG0/NBG1, priority 2, SFPRMD = 0x0005) lost to the
+  // priority-2 river sprite and the water was drawn over the terrain. The legacy
+  // path is unaffected: it sorts mode 1 via tile.priorityOffset (vertex z) below
+  // and its shaders only branch on specialPriority == 2.
+  tile.specialprimode = info->specialprimode;
   tile.specialcode = info->specialcode;
   tile.specialcolorfunction = info->specialcolorfunction;
   tile.mosaicxmask = info->mosaicxmask;

@@ -972,6 +972,25 @@ static void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, int * priority, int *
     return;
   }
 
+  // Texture part drawn in RGB color mode (CMDPMOD color mode 5): CMDCOLR is
+  // *ignored* by the hardware (VDP1 manual 6.4 "RGB mode -> this word is
+  // ignored"), the raw 16-bit texel reaches the frame buffer unchanged. VDP2
+  // then sees MSB=1 and treats the priority / color calculation / shadow bits
+  // as 0 (VDP2 manual 9.1), i.e. register slot 0 -- same as mednafen
+  // T_DrawSpriteData. Without this, whatever stale value the game left in the
+  // ignored CMDCOLR field selects the sprite priority slot, so RGB sprites
+  // float above VDP2 layers they should sit behind. Command types 0..3 are the
+  // textured parts; for polygon/polyline/line CMDCOLR *is* the color and the
+  // CMDPMOD color mode field carries no meaning, so they must not take this
+  // path.
+  if ((SPCLMD & 0x20) && ((cmd->CMDCTRL & 0xF) <= 3) &&
+      (((cmd->CMDPMOD >> 3) & 0x7) == 5))
+  {
+    *priority = 0;
+    *colorcl = 0;
+    return;
+  }
+
   if (((cmd->CMDPMOD >> 3) & 0x7) == 1) {
     u32 charAddr, dot, colorLut;
 
@@ -3628,6 +3647,12 @@ static void FASTCALL Vdp2DrawRotation(RBGDrawInfo * rbg)
   case RBG_RES_2x:
     rbg->rotate_mval_h = 2.0f;
     rbg->rotate_mval_v = 2.0f;
+    rbg->hres = rbg->hres * rbg->rotate_mval_h;
+    rbg->vres = rbg->vres * rbg->rotate_mval_v;
+    break;
+  case RBG_RES_4x:
+    rbg->rotate_mval_h = 4.0f;
+    rbg->rotate_mval_v = 4.0f;
     rbg->hres = rbg->hres * rbg->rotate_mval_h;
     rbg->vres = rbg->vres * rbg->rotate_mval_v;
     break;
@@ -8431,6 +8456,18 @@ void VIDOGLSetSettingValueMode(int type, int value) {
 	  }
 	  break;
   case VDP_SETTING_POLYGON_MODE:
+    // The OpenGL core only implements PERSPECTIVE_CORRECTION,
+    // CPU_TESSERATION and GPU_TESSERATION. COMPUTE_RASTERIZER is a
+    // Vulkan-core feature; an unknown mode would fall through the
+    // dispatch in YglQuadGrowShading without allocating the texture
+    // atlas slot, leaving YglTexture.textdata uninitialized and
+    // crashing in Vdp1ReadTexture on the first distorted sprite. The
+    // Vulkan core degrades unsupported modes the same way (see its
+    // GPU_TESSERATION fallback).
+    if (value != PERSPECTIVE_CORRECTION && value != CPU_TESSERATION &&
+        value != GPU_TESSERATION) {
+      value = PERSPECTIVE_CORRECTION;
+    }
     _Ygl->polygonmode = value;
     break;
   case VDP_SETTING_ROTATE_SCREEN:

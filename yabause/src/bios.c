@@ -1627,43 +1627,71 @@ static void FASTCALL BiosBUPSetDate(SH2_struct * sh)
 
 //////////////////////////////////////////////////////////////////////////////
 
+// Instruction-issue cost of the SCU interrupt dispatcher these two handlers
+// stand in for. On hardware the dispatcher is ordinary SH-2 code in the BIOS
+// work area; its stack traffic is charged separately below, because the
+// handlers go through MappedMemory*Long and therefore through the SH-2 cache.
+//
+// This used to be a flat 200 cycles on entry AND another 200 on return. An
+// HBlank driven title takes about 225 interrupts per frame, so the stand-in
+// alone burned ~90k cycles a frame -- 20% of the master's budget -- that a
+// real BIOS never spends, leaving the master 21% short of its real-BIOS
+// instruction throughput. Sonic 3D's opening movie fell permanently behind its
+// time base as a result: the player skips decoding whenever it is two or more
+// frames behind, and it could never catch up again.
+#define BIOS_IRQ_DISPATCH_CYCLES 24
+
 static void FASTCALL BiosHandleScuInterrupt(SH2_struct * sh, int vector)
 {
    SH2GetRegisters(sh, &sh->regs);
    u32 cycle=0;
+   u32 irqcycles = 0;
 
    LOG("BiosHandleScuInterrupt");
 
    // Save R0-R7, PR, GBR, and old Interrupt mask to stack
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.R[0],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.R[1],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.R[2],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.R[3],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], MappedMemoryReadLong(0x06000348,&cycle),&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.R[4],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.R[5],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.R[6],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.R[7],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.PR,&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] -= 4;
    MappedMemoryWriteLong(sh->regs.R[15], sh->regs.GBR,&cycle);
+   irqcycles += cycle;
 
    // Set SR according to vector
    sh->regs.SR.all = (u32)sh2masklist[vector - 0x40];
 
    // Write new Interrupt mask value
    MappedMemoryWriteLong(0x06000348, MappedMemoryReadLong(0x06000348,&cycle) | scumasklist[vector - 0x40],&cycle);
+   irqcycles += cycle;
    MappedMemoryWriteLong(0x25FE00A0, MappedMemoryReadLong(0x06000348,&cycle) | scumasklist[vector - 0x40],&cycle);
+   irqcycles += cycle;
 
    // Set PR to our Interrupt Return handler
    sh->regs.PR = 0x00000480;
@@ -1671,9 +1699,10 @@ static void FASTCALL BiosHandleScuInterrupt(SH2_struct * sh, int vector)
    // Now execute the interrupt
    u32 old_pc = sh->regs.PC;
    sh->regs.PC = MappedMemoryReadLong(0x06000900+(vector << 2),&cycle);
+   irqcycles += cycle;
    //LOG("Interrupt from: %08X to %08X", old_pc, sh->regs.PC );
 
-   sh->cycles += 200;
+   sh->cycles += irqcycles + BIOS_IRQ_DISPATCH_CYCLES;
    SH2SetRegisters(sh, &sh->regs);
 }
 
@@ -1683,6 +1712,7 @@ static void FASTCALL BiosHandleScuInterruptReturn(SH2_struct * sh)
 {
    u32 oldmask;
    u32 cycle = 0;
+   u32 irqcycles = 0;
 
    LOG("BiosHandleScuInterruptReturn");
 
@@ -1690,40 +1720,54 @@ static void FASTCALL BiosHandleScuInterruptReturn(SH2_struct * sh)
 
    // Restore R0-R7, PR, GBR, and old Interrupt mask from stack
    sh->regs.GBR = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.PR = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.R[7] = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.R[6] = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.R[5] = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.R[4] = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    // Return SR back to normal
    sh->regs.SR.all = 0xF0;
    oldmask = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    MappedMemoryWriteLong(0x06000348, oldmask,&cycle);
+   irqcycles += cycle;
    MappedMemoryWriteLong(0x25FE00A0, oldmask,&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.R[3] = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.R[2] = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.R[1] = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.R[0] = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
 
    sh->regs.PC = MappedMemoryReadLong(sh->regs.R[15],&cycle);
+   irqcycles += cycle;
    sh->regs.R[15] += 4;
    sh->regs.SR.all = MappedMemoryReadLong(sh->regs.R[15],&cycle) & 0x000003F3;
    sh->regs.R[15] += 4;
 
    //LOG("Interrupt return PC = %08X\n", sh->regs.PC);
 
-   sh->cycles += 200;
+   sh->cycles += irqcycles + BIOS_IRQ_DISPATCH_CYCLES;
    SH2SetRegisters(sh, &sh->regs);
 }
 

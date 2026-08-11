@@ -244,6 +244,7 @@ void SH2Reset(SH2_struct *context) {
 
   context->inputCaptureCount = 0;
   context->frtIcMergedEdges = 0;
+  context->frtIcIntOwed = 0;
 
   // Reset Interrupts
   memset((void *)context->interrupts, 0,
@@ -1607,11 +1608,13 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
 
     CurrentSH2->onchip.TIER = (val & 0x8E) | 0x1;
     if ((val & 0x80) && (CurrentSH2 == SSH2) && (SSH2->onchip.FTCSR & 0x80)) {
+      SSH2->frtIcIntOwed = 1;
       SH2SendInterrupt(SSH2, (SSH2->onchip.VCRC >> 8) & 0x7F,
                        (SSH2->onchip.IPRB >> 8) & 0xF);
     }
 
     if ((val & 0x80) && (CurrentSH2 == MSH2) && (MSH2->onchip.FTCSR & 0x80)) {
+      MSH2->frtIcIntOwed = 1;
       SH2SendInterrupt(MSH2, (MSH2->onchip.VCRC >> 8) & 0x7F,
                        (MSH2->onchip.IPRB >> 8) & 0xF);
     }
@@ -1627,9 +1630,15 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
     if (!(CurrentSH2->onchip.FTCSR & 0x80) && CurrentSH2->frtIcMergedEdges > 0) {
       CurrentSH2->frtIcMergedEdges--;
       CurrentSH2->onchip.FTCSR |= 0x80;
+      // A handler run is still owed for the edge just re-latched.
+      CurrentSH2->frtIcIntOwed = 1;
       if (CurrentSH2->onchip.TIER & 0x80)
         SH2SendInterrupt(CurrentSH2, (CurrentSH2->onchip.VCRC >> 8) & 0x7F,
                          (CurrentSH2->onchip.IPRB >> 8) & 0xF);
+    } else if (!(CurrentSH2->onchip.FTCSR & 0x80)) {
+      // ICF retired with nothing banked behind it: the next ICF must come from
+      // a genuinely new edge.
+      CurrentSH2->frtIcIntOwed = 0;
     }
     /*
              if( (CurrentSH2->onchip.FTCSR & 0x80) == 0x00 ){
@@ -2964,8 +2973,20 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA) {
 void FASTCALL MSH2InputCaptureWriteWord(UNUSED u32 addr, UNUSED u16 data) {
   // Edge arriving while ICF is still set: remember it so the (late) handler
   // clearing ICF does not silently drop it. See frtIcMergedEdges.
-  if ((MSH2->onchip.FTCSR & 0x80) && MSH2->frtIcMergedEdges < 8)
+  // Only while a handler run is owed for that ICF: the bank compensates for
+  // the emulator's delayed interrupt acceptance, so it is meaningful exactly
+  // when an ICI was raised and has not been retired yet. Testing TIER.ICIE
+  // here instead is wrong -- an ICI handler typically masks ICIE as its first
+  // act, and a doorbell landing inside that window is precisely the one that
+  // must be banked. A CPU that never raised an ICI banks nothing and keeps the
+  // hardware level-flag semantics that polling flow control needs (Azel's
+  // slave job ring throttles its producer that way).
+  if ((MSH2->onchip.FTCSR & 0x80) && MSH2->frtIcIntOwed &&
+      MSH2->frtIcMergedEdges < 8)
     MSH2->frtIcMergedEdges++;
+
+  if (MSH2->onchip.TIER & 0x80)
+    MSH2->frtIcIntOwed = 1;
 
   // Set Input Capture Flag
   MSH2->onchip.FTCSR |= 0x80;
@@ -2989,11 +3010,18 @@ void FASTCALL MSH2InputCaptureWriteWord(UNUSED u32 addr, UNUSED u16 data) {
     SH2Core->SetPC(MSH2, pc);
   }
 
-  if (CurrentSH2->depth < 4) {
-    CurrentSH2->depth++;
+  // Synchronous catch-up of the target CPU, but never while the target is
+  // itself in the middle of a doorbell store (target->depth != 0). Opcode
+  // handlers advance PC only after the memory access returns, so re-entering
+  // the target here would re-execute its in-flight store and, on unwind, its
+  // deferred "PC += 2" would skip one instruction at wherever the nested run
+  // stopped (Azel: the ring tail update right after the doorbell write),
+  // silently corrupting lock-free master<->slave protocols.
+  if (CurrentSH2->depth < 4 && MSH2->depth == 0 && CurrentSH2 != MSH2) {
     int syncCycle = CurrentSH2->cycles - MSH2->cycles;
     if (syncCycle > 0) {
       SH2_struct *tmpCurrentSH2 = CurrentSH2;
+      tmpCurrentSH2->depth++;
       SH2Exec(MSH2, syncCycle);
       CurrentSH2 = tmpCurrentSH2;
       CurrentSH2->depth--;
@@ -3005,9 +3033,14 @@ void FASTCALL MSH2InputCaptureWriteWord(UNUSED u32 addr, UNUSED u16 data) {
 
 void FASTCALL SSH2InputCaptureWriteWord(UNUSED u32 addr, UNUSED u16 data) {
   // Edge arriving while ICF is still set: remember it so the (late) handler
-  // clearing ICF does not silently drop it. See frtIcMergedEdges.
-  if ((SSH2->onchip.FTCSR & 0x80) && SSH2->frtIcMergedEdges < 8)
+  // clearing ICF does not silently drop it. Only while a handler run is owed
+  // -- see MSH2InputCaptureWriteWord for the full rationale.
+  if ((SSH2->onchip.FTCSR & 0x80) && SSH2->frtIcIntOwed &&
+      SSH2->frtIcMergedEdges < 8)
     SSH2->frtIcMergedEdges++;
+
+  if (SSH2->onchip.TIER & 0x80)
+    SSH2->frtIcIntOwed = 1;
 
   // Set Input Capture Flag
   SSH2->onchip.FTCSR |= 0x80;
@@ -3035,11 +3068,12 @@ void FASTCALL SSH2InputCaptureWriteWord(UNUSED u32 addr, UNUSED u16 data) {
   }
 
 #if 1
-  if (CurrentSH2->depth < 4) {
-    CurrentSH2->depth++;
+  // See MSH2InputCaptureWriteWord: never re-enter a CPU that is mid-store.
+  if (CurrentSH2->depth < 4 && SSH2->depth == 0 && CurrentSH2 != SSH2) {
     int syncCycle = CurrentSH2->cycles - SSH2->cycles;
     if (syncCycle > 0) {
       SH2_struct *tmpCurrentSH2 = CurrentSH2;
+      tmpCurrentSH2->depth++;
       SH2Exec(SSH2, syncCycle);
       CurrentSH2 = tmpCurrentSH2;
       CurrentSH2->depth--;
@@ -3067,9 +3101,9 @@ int SH2SaveState(SH2_struct *context, FILE *fp) {
 
   // Write header
   if (context->isslave == 0)
-    offset = StateWriteHeader(fp, "MSH2", 5);
+    offset = StateWriteHeader(fp, "MSH2", 7);
   else {
-    offset = StateWriteHeader(fp, "SSH2", 5);
+    offset = StateWriteHeader(fp, "SSH2", 7);
     ywrite(&check, (void *)&yabsys.IsSSH2Running, 1, 1, fp);
   }
 
@@ -3107,6 +3141,25 @@ int SH2SaveState(SH2_struct *context, FILE *fp) {
 
   ywrite(&check, (void *)&context->dma_ch0.copy_clock, sizeof(u32), 1, fp);
   ywrite(&check, (void *)&context->dma_ch1.copy_clock, sizeof(u32), 1, fp);
+
+  // Version 6: pending FRT input-capture edges that were merged into an
+  // already-set ICF. Dropping them across a state load loses one real edge of
+  // a master/slave doorbell handshake, which is exactly the deadlock the
+  // merged-edge counter exists to prevent.
+  ywrite(&check, (void *)&context->frtIcMergedEdges, sizeof(u32), 1, fp);
+
+  // Version 6: watchdog timer state and the SLEEP flag. Both were never
+  // serialized: WTCSR itself lives in onchip, but the decoded divisor and the
+  // enable/interval flags are only recomputed on the next WTCSR write, and a
+  // CPU that was asleep came back awake.
+  ywrite(&check, (void *)&context->wdt, sizeof(context->wdt), 1, fp);
+  ywrite(&check, (void *)&context->isSleeping, sizeof(u8), 1, fp);
+
+  // Version 7: the "a handler run is still owed for the latched ICF" flag.
+  // It cannot be derived from frtIcMergedEdges: the usual state is owed with an
+  // empty bank, and reconstructing it as zero drops the gate that lets the next
+  // doorbell edge be banked at all.
+  ywrite(&check, (void *)&context->frtIcIntOwed, sizeof(u8), 1, fp);
 
   return StateFinishHeader(fp, offset);
 }
@@ -3267,6 +3320,31 @@ int SH2LoadState(SH2_struct *context, FILE *fp, UNUSED int version, int size) {
     yread(&check, (void *)&context->dma_ch0.copy_clock, sizeof(u32), 1, fp);
     yread(&check, (void *)&context->dma_ch1.copy_clock, sizeof(u32), 1, fp);
   }
+
+  // Version 6: merged FRT input-capture edges (see SH2SaveState). Older
+  // states leave the counter at the value SH2Reset() set above (zero).
+  if (version >= 6) {
+    yread(&check, (void *)&context->frtIcMergedEdges, sizeof(u32), 1, fp);
+    // A non-empty bank implies a handler run is still owed for the latched
+    // ICF, which is all frtIcIntOwed records; rebuild it instead of growing
+    // the state format.
+    context->frtIcIntOwed = (context->frtIcMergedEdges > 0);
+    yread(&check, (void *)&context->wdt, sizeof(context->wdt), 1, fp);
+    yread(&check, (void *)&context->isSleeping, sizeof(u8), 1, fp);
+
+    // Version 7: the owed flag itself. A version 6 state only carries the
+    // merged edge count, so it keeps the approximation above - which is wrong
+    // whenever the state was saved with an ICI raised and an empty bank, and
+    // that is why the flag is written out now.
+    if (version >= 7) {
+      yread(&check, (void *)&context->frtIcIntOwed, sizeof(u8), 1, fp);
+    }
+  } else {
+    // Older states carry neither; SH2Reset() above already put wdt back to its
+    // power-on values, so only the SLEEP flag needs clearing here.
+    context->isSleeping = 0;
+  }
+
   yabsys.frame_count = 0;
   return size;
 }

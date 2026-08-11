@@ -125,6 +125,16 @@ else ifeq ($(platform), arm64)
 	USE_AARCH64_DRC = 1
 	DYNAREC_DEVMIYAX = 1
 	ALLOW_POLYGON_MODE = 0
+	# Vendored zlib's gzlib.c/gzread.c call lseek/read without including
+	# <unistd.h>; force-include it (same shim the macOS path uses).
+	FLAGS += -include unistd.h
+	# libretro-common's glsym_es3.h lacks the GL 4.3 compute-shader enums
+	# ygl_texture.cpp uses (it only generates ES3 symbols); provide the
+	# standard values (same shim the macOS path uses).
+	FLAGS += -DGL_MAX_COMPUTE_WORK_GROUP_COUNT=0x91BE -DGL_MAX_COMPUTE_WORK_GROUP_SIZE=0x91BF
+	FLAGS += -DGL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS=0x90EB -DGL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS=0x90EC
+	FLAGS += -DGL_SHADER_STORAGE_BUFFER=0x90D2 -DGL_MAX_SHADER_STORAGE_BUFFER_BINDINGS=0x90DD
+	FLAGS += -DGL_ALL_BARRIER_BITS=0xFFFFFFFF
 
 # Amlogic S922X Odroid-N2 / A311D Khadas VIM3 (AMLG12B) - 32-bit userspace
 else ifneq (,$(findstring AMLG12B,$(platform)))
@@ -437,7 +447,12 @@ FLAGS += $(fpic)
 
 INCFLAGS := $(foreach dir,$(INCLUDE_DIRS),-I$(dir))
 
-WARNINGS :=
+# GCC 14+ makes -Wincompatible-pointer-types/-Wdiscarded-qualifiers hard
+# errors by default; upstream core files (ygles.c, vidogl.c, yglshaderes.c)
+# carry a few mismatches that are benign in practice.  They are warning
+# classes, so suppressing them keeps the core files byte-identical to
+# upstream (ADR 0015) while still building with modern toolchains.
+WARNINGS := -Wno-incompatible-pointer-types -Wno-discarded-qualifiers
 FLAGS += $(INCFLAGS) -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(WARNINGS) \
 	-DNO_CLI -DHAVE_BUILTIN_BSWAP16=1 -DHAVE_BUILTIN_BSWAP32=1 -DHAVE_C99_VARIADIC_MACROS=1 \
 	-DHAVE_FLOORF=1 -DHAVE_GETTIMEOFDAY=1 -DHAVE_STDINT_H=1 -DHAVE_SYS_TIME_H=1 -DHAVE_STRCASECMP=1 -DIMPROVED_SAVESTATES \
