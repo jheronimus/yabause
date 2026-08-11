@@ -419,10 +419,18 @@ extern "C" u32 FASTCALL Vdp1ReadLong(u32 addr) {
 // deadlocks the boot. Walk the table the same way Vdp1DrawCommands does,
 // sum an approximate cycle cost (fixed fetch overhead plus filled
 // bounding-box area) and convert it to scanlines. The result is clamped
-// to the legacy 50 lines so large scenes keep the previous timing.
+// to MAX_LINES below.
 extern "C" int Vdp1EstimateDrawLines(u8 * ram, Vdp1 * regs) {
    const u32 CYCLES_PER_LINE = 1700; // ~26.8MHz / (263 lines * 60Hz)
-   const u32 MAX_LINES = 50;         // legacy flat delay
+   // Keep the legacy 50-line cap: the estimate must stay well below one
+   // frame. In one cycle mode the latch reschedules the draw-end every
+   // field, so an estimate longer than the swap interval can never fire -
+   // Astal's intro FMV estimates at ~343 lines (bounding-box inflation),
+   // and with a raised cap the modelled CEF never set, deadlocking the
+   // game's FMV-skip which only arms its manual frame change when the
+   // VBlank-OUT handler sees CEF. Real hardware completes these draws
+   // within the field.
+   const u32 MAX_LINES = 50;
    u32 addr = (Vdp1External.status == VDP1_STATUS_IDLE) ? 0 : (regs->addr & 0x7FFFF);
    u32 returnAddr = 0xFFFFFFFF;
    u32 cycles = 0;
@@ -473,7 +481,7 @@ extern "C" int Vdp1EstimateDrawLines(u8 * ram, Vdp1 * regs) {
          }
          cycles += area; // ~1 VDP1 cycle per filled texel (rough)
          if (cycles >= MAX_LINES * CYCLES_PER_LINE)
-            return (int)MAX_LINES; // early out: saturated to legacy delay
+            return (int)MAX_LINES; // early out: saturated
       }
       // Next, determine where to go next (mirrors Vdp1DrawCommands)
       switch ((command & 0x3000) >> 12) {
@@ -527,6 +535,9 @@ extern "C" void FASTCALL Vdp1WriteByte(u32 addr, UNUSED u8 val) {
 }
 
 extern YabEventQueue * vdp1_rcv_evqueue;
+extern int vdp1_drawend_lines;
+void Vdp1JoinPendingRenders(void);
+void Vdp1MarkRenderDispatched(void);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -541,7 +552,7 @@ extern "C" void FASTCALL Vdp1WriteWord(u32 addr, u16 val) {
       //FRAMELOG("[VDP1] Write FCM=%d FCT=%d line = %d", (val & 0x02) >> 1, (val & 0x01), yabsys.LineCount);
 
       Vdp1Regs->FBCR = val;
-      
+
       FRAMELOG("[VDP1] Write FBCR %X line = %d @ %08X", Vdp1Regs->FBCR, yabsys.LineCount, CurrentSH2->regs.PC);
 
       if ((Vdp1Regs->FBCR & 3) == 3) {
@@ -558,15 +569,13 @@ extern "C" void FASTCALL Vdp1WriteWord(u32 addr, u16 val) {
       //Vdp1Regs->COPR = 0;
       //printf("COPR = 0 at %d\n", __LINE__);
       Vdp1Regs->PTMR = val;
-#if YAB_ASYNC_RENDERING
-      if (val == 1){ 
+      if (val == 1 && VdpIsAsyncRendering()) {
         FRAMELOG("[VDP1] VDPEV_DIRECT_DRAW %d/%d", YaGetQueueSize(vdp1_rcv_evqueue), yabsys.LineCount);
-        if ( YaGetQueueSize(vdp1_rcv_evqueue) > 0){
-          yabsys.wait_line_count = -1;
-          do{
-            YabWaitEventQueue(vdp1_rcv_evqueue);
-          } while (YaGetQueueSize(vdp1_rcv_evqueue) != 0);
-        }
+        // A new draw supersedes whatever was in flight: join the previous
+        // render event so the done-event bookkeeping stays exact, then
+        // cancel any scheduled draw-end before rescheduling below.
+        Vdp1JoinPendingRenders();
+        vdp1_drawend_lines = 0;
         Vdp1Regs->EDSR >>= 1;
         {
           int estlines = Vdp1EstimateDrawLines(Vdp1Ram, Vdp1Regs);
@@ -577,55 +586,50 @@ extern "C" void FASTCALL Vdp1WriteWord(u32 addr, u16 val) {
             // sync path. Die Hard Trilogy chains its render loop off
             // this IRQ and deadlocks its slave-SH2 restart handshake if
             // the draw-end arrives a line late.
-            yabsys.wait_line_count = -1;
             YabAddEventQueue(evqueue, VDPEV_DIRECT_DRAW);
-            do {
-              YabWaitEventQueue(vdp1_rcv_evqueue);
-            } while (YaGetQueueSize(vdp1_rcv_evqueue) != 0);
+            Vdp1MarkRenderDispatched();
+            Vdp1JoinPendingRenders();
             if (Vdp1External.status == VDP1_STATUS_IDLE) {
               Vdp1Regs->EDSR |= 2;
               ScuSendDrawEnd();
             }
           }
           else {
-            yabsys.wait_line_count = yabsys.LineCount + estlines;
-            yabsys.wait_line_count %= yabsys.MaxLineCount;
-            if (yabsys.wait_line_count == 5) { yabsys.wait_line_count = 4; }
-            FRAMELOG("SET DIRECT WAIT %d", yabsys.wait_line_count);
+            vdp1_drawend_lines = estlines;
+            FRAMELOG("SET DIRECT WAIT in %d lines", estlines);
             YabAddEventQueue(evqueue,VDPEV_DIRECT_DRAW);
+            Vdp1MarkRenderDispatched();
           }
         }
         YabThreadYield();
       }
-#else
-    if (val == 1){
-      FRAMELOG("VDP1: VDPEV_DIRECT_DRAW\n");
-      Vdp1Regs->EDSR >>= 1;
-      Vdp1Draw();
-      VIDCore->Vdp1DrawEnd();
-      {
-        int lines = Vdp1EstimateDrawLines(Vdp1Ram, Vdp1Regs);
-        if (lines == 0 && Vdp1External.status == VDP1_STATUS_IDLE) {
-          // Tiny command list: the real VDP1 finishes it within the
-          // current line, so raise the draw-end interrupt right away.
-          // Games chain their render loop off this IRQ and expect it to
-          // preempt the CPU before mainline code resumes (Die Hard
-          // Trilogy deadlocks its slave-SH2 restart handshake if the
-          // draw-end arrives a line late).
-          yabsys.wait_line_count = -1;
-          Vdp1Regs->EDSR |= 2;
-          ScuSendDrawEnd();
+      else if (val == 1) {
+        FRAMELOG("VDP1: VDPEV_DIRECT_DRAW\n");
+        Vdp1Regs->EDSR >>= 1;
+        Vdp1Draw();
+        VIDCore->Vdp1DrawEnd();
+        {
+          int lines = Vdp1EstimateDrawLines(Vdp1Ram, Vdp1Regs);
+          if (lines == 0 && Vdp1External.status == VDP1_STATUS_IDLE) {
+            // Tiny command list: the real VDP1 finishes it within the
+            // current line, so raise the draw-end interrupt right away.
+            // Games chain their render loop off this IRQ and expect it to
+            // preempt the CPU before mainline code resumes (Die Hard
+            // Trilogy deadlocks its slave-SH2 restart handshake if the
+            // draw-end arrives a line late).
+            yabsys.wait_line_count = -1;
+            Vdp1Regs->EDSR |= 2;
+            ScuSendDrawEnd();
+          }
+          else {
+            if (lines == 0) lines = 1;
+            yabsys.wait_line_count = yabsys.LineCount + lines;
+            yabsys.wait_line_count %= yabsys.MaxLineCount;
+          }
         }
-        else {
-          if (lines == 0) lines = 1;
-          yabsys.wait_line_count = yabsys.LineCount + lines;
-          yabsys.wait_line_count %= yabsys.MaxLineCount;
-        }
+        //if (yabsys.wait_line_count == 2) { yabsys.wait_line_count = 3; } // it should not be the same line with render.
+        FRAMELOG("VDP1: end line is %d", yabsys.wait_line_count);
       }
-      //if (yabsys.wait_line_count == 2) { yabsys.wait_line_count = 3; } // it should not be the same line with render.
-      FRAMELOG("VDP1: end line is %d", yabsys.wait_line_count);
-    }
-#endif
          break;
       case 0x6:
          Vdp1Regs->EWDR = val;
@@ -640,6 +644,7 @@ extern "C" void FASTCALL Vdp1WriteWord(u32 addr, u16 val) {
          Vdp1Regs->ENDR = val;
          Vdp1External.status = VDP1_STATUS_IDLE;
          yabsys.wait_line_count = -1;
+         vdp1_drawend_lines = 0;
          LOG("Force to stop Vdp1\n", addr);
          break;
       default:

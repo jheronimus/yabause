@@ -483,6 +483,15 @@ void YglUpdateColorRam();
 void VdpResume( void );
 void VdpRevoke( void );
 
+// Runtime switch for the threaded (async) VDP rendering model. The
+// compile-time YAB_ASYNC_RENDERING define only sets the default, so ports
+// that never call the setter keep their historical behavior. Must be set
+// before YabauseInit()/Vdp2Init() - the VDP thread and its event queues
+// are created there and the mode must not change while emulation is
+// initialized.
+void VdpSetAsyncRendering(int enable);
+int VdpIsAsyncRendering(void);
+
 #ifdef __cplusplus
 }
 #endif

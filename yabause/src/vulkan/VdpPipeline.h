@@ -79,7 +79,10 @@ public:
   VkShaderModule compileShader(uint32_t id, const string & code, int type);
 
 private:
-  VIDVulkan * vulkan;
+  // Set by setVulkan() before the first compileShader(). Null until then, so
+  // the destructor must not dereference it unconditionally -- free() can run
+  // on a ShaderManager that never compiled anything.
+  VIDVulkan * vulkan = nullptr;
   static ShaderManager * instance;
   ShaderManager() {
 

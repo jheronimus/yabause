@@ -1,4 +1,4 @@
-[submodule "yabause/src/retro_arena/nanogui-sdl/ext/eigen"]
+[submodule "ext/eigen"]
 	path = yabause/src/retro_arena/nanogui-sdl/ext/eigen
 	url = https://github.com/libigl/eigen.git
 [submodule "yabause/src/android/oboe"]

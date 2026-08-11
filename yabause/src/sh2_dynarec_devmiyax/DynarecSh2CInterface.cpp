@@ -195,8 +195,17 @@ void SH2DynDebugReset(SH2_struct *context) {
 
 void FASTCALL SH2DynExec(SH2_struct *context, u32 cycles){
   DynarecSh2* pctx = ((DynarecSh2*)context->ext);
+  // SH2DynExec can be re-entered from the middle of a compiled block: the
+  // FRT input-capture doorbell (sh2core.c XSH2InputCaptureWriteWord) runs
+  // the other CPU synchronously from inside a memory-write helper. Restore
+  // CurrentContext afterwards, otherwise the interrupted block keeps running
+  // with the other CPU's context (cycle counts, interrupt checks, block
+  // dispatch all read DynarecSh2::CurrentContext) and silently corrupts
+  // both CPUs' state.
+  DynarecSh2* prev_ctx = DynarecSh2::CurrentContext;
   pctx->SetCurrentContext();
   pctx->ExecuteCount(cycles);
+  DynarecSh2::CurrentContext = prev_ctx;
 }
 
 void SH2DynSendInterrupt(SH2_struct *context, u8 vector, u8 level){

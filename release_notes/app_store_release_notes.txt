@@ -1,68 +1,78 @@
 ================================================================================
-App Store Release Notes - YabaSanshiro v1.20.32
+App Store Release Notes - YabaSanshiro v1.20.37
 ================================================================================
 
 [en] English
 --------------------------------------------------------------------------------
 Promotional Text:
-The ultimate Sega Saturn emulator! Fixes corrupted character graphics, versus fighters not booting, dimmed dialogue, cut-off voices and black in-game movies.
+The ultimate Sega Saturn emulator! Fixes black screens, freezes, flicker and audio dropouts in Die Hard Trilogy, Panzer Dragoon Saga, Sonic 3D Blast and more.
 
 What's New:
-- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: fixed the games not booting
-- EMIT Vol.1: fixed the whole screen dimming while dialogue is shown
-- EMIT Vol.1: fixed voices cutting out partway through
-- DEEP FEAR: fixed in-game movies showing a black screen
-- GOLDEN AXE THE DUEL: fixed corrupted character graphics
-- SONIC JAM: fixed stuttering character movement (European version)
+- DIE HARD TRILOGY / LAYER SECTION II: fixed the screen going completely black
+- PANZER DRAGOON SAGA / GUNGRIFFON II: fixed a freeze during gameplay
+- SONIC JAM: fixed low frame rate; ASTAL / STREET FIGHTER ALPHA 3: fixed flicker
+- SONIC 3D BLAST: fixed the opening movie stalling and characters hidden by the ground
+- Audio: fixed dropouts and crackling, and stabilized the frame rate at 60fps
+- MR. BONES: fixed characters not being drawn
+- Save states: fixed some data not being saved, improving reliability
+- Fixed the app becoming unresponsive when exiting a game
 
 [es] Spanish
 --------------------------------------------------------------------------------
 Promotional Text:
-¡El mejor emulador de Sega Saturn! Corrige gráficos dañados de personajes, juegos de lucha que no arrancaban, diálogos oscurecidos, voces y vídeos.
+¡El mejor emulador de Sega Saturn! Corrige pantallas negras, bloqueos, parpadeos y cortes de audio en Die Hard Trilogy, Panzer Dragoon Saga, Sonic 3D Blast y más.
 
 What's New:
-- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: corregido que no arrancaran
-- EMIT Vol.1: corregido el oscurecimiento de toda la pantalla en los diálogos
-- EMIT Vol.1: corregido el audio que se cortaba a la mitad
-- DEEP FEAR: corregida la pantalla negra en los vídeos del juego
-- GOLDEN AXE THE DUEL: corregidos los gráficos dañados de los personajes
-- SONIC JAM: corregido el movimiento entrecortado de los personajes (versión europea)
+- DIE HARD TRILOGY / LAYER SECTION II: se corrigió la pantalla completamente negra
+- PANZER DRAGOON SAGA / GUNGRIFFON II: se corrigió un congelamiento durante el juego
+- SONIC JAM: baja tasa de cuadros; ASTAL / STREET FIGHTER ALPHA 3: parpadeo corregido
+- SONIC 3D BLAST: corregido el vídeo inicial que se detenía y los personajes ocultos por el suelo
+- Audio: corregidos cortes y chasquidos; velocidad estable a 60fps
+- MR. BONES: se corrigieron los personajes que no se mostraban
+- Estados de guardado: se corrigieron datos que no se guardaban; mayor fiabilidad
+- Se corrigió que la app dejara de responder al salir de un juego
 
 [pt-BR] Portuguese (Brazil)
 --------------------------------------------------------------------------------
 Promotional Text:
-O melhor emulador de Sega Saturn! Corrige gráficos corrompidos dos personagens, jogos de luta que não iniciavam, diálogos escurecidos, vozes e vídeos.
+O melhor emulador de Sega Saturn! Corrige telas pretas, travamentos, cintilação e falhas de áudio em Die Hard Trilogy, Panzer Dragoon Saga, Sonic 3D Blast e mais.
 
 What's New:
-- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: corrigido o não iniciar dos jogos
-- EMIT Vol.1: corrigido o escurecimento de toda a tela nos diálogos
-- EMIT Vol.1: corrigido o áudio interrompido no meio
-- DEEP FEAR: corrigida a tela preta nos vídeos do jogo
-- GOLDEN AXE THE DUEL: corrigidos os gráficos corrompidos dos personagens
-- SONIC JAM: corrigido o movimento travado dos personagens (versão europeia)
+- DIE HARD TRILOGY / LAYER SECTION II: corrigida a tela completamente preta
+- PANZER DRAGOON SAGA / GUNGRIFFON II: corrigido um travamento durante o jogo
+- SONIC JAM: baixa taxa de quadros; ASTAL / STREET FIGHTER ALPHA 3: cintilação corrigida
+- SONIC 3D BLAST: corrigido o vídeo inicial travando e personagens ocultos pelo chão
+- Áudio: corrigidos cortes e estalos; taxa de quadros estável em 60fps
+- MR. BONES: corrigidos os personagens que não eram exibidos
+- Estados de salvamento: corrigidos dados que não eram salvos; mais confiabilidade
+- Corrigido o app parar de responder ao sair de um jogo
 
 [zh-Hans] Chinese (Simplified)
 --------------------------------------------------------------------------------
 Promotional Text:
-体验终极世嘉土星模拟器！修复角色显示错乱、对战格斗无法启动、对话画面变暗、语音中断与游戏内动画黑屏等问题。
+体验终极世嘉土星模拟器！修复黑屏、冻结、画面闪烁与声音断续问题（虎胆龙威三部曲、AZEL 铁甲飞龙RPG、索尼克3D 等）。
 
 What's New:
-- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER：修复了无法启动的问题
-- EMIT Vol.1：修复了显示对话时整个画面变暗的问题
-- EMIT Vol.1：修复了语音中途中断的问题
-- DEEP FEAR：修复了游戏内动画显示黑屏的问题
-- GOLDEN AXE THE DUEL：修复了角色显示错乱的问题
-- SONIC JAM：修复了角色动作卡顿的问题（欧版）
+- DIE HARD TRILOGY / LAYER SECTION II：修复画面全黑的问题
+- PANZER DRAGOON SAGA / GUNGRIFFON II：修复游戏冻结的问题
+- SONIC JAM：修复帧率过低；ASTAL / STREET FIGHTER ALPHA 3：修复画面闪烁
+- SONIC 3D BLAST：修复开场动画卡住以及角色被地面遮挡的问题
+- 音频：修复声音断续与爆音，帧率稳定在 60fps
+- MR. BONES：修复角色不显示的问题
+- 即时存档：修复部分数据未保存的问题，提高可靠性
+- 修复退出游戏时应用无响应的问题
 
 [ja] Japanese
 --------------------------------------------------------------------------------
 Promotional Text:
-究極のセガサターンエミュレーター！キャラクター表示の乱れ、対戦格闘の起動不能、セリフ画面の暗転、音声の途切れ、ムービーの黒画面を修正しました。
+究極のセガサターンエミュレータ！黒画面やフリーズ、画面のちらつきに加え、音声の途切れとソニック3Dのムービー停止も修正しました。
 
 What's New:
-- X-MEN VS. STREET FIGHTER / MARVEL SUPER HEROES VS. STREET FIGHTER: 起動しない問題を修正
-- EMIT Vol.1: セリフの表示中に画面全体が暗くなる問題を修正
-- EMIT Vol.1: 音声が途中で途切れる問題を修正
-- DEEP FEAR: ゲーム中のムービーが真っ黒になる問題を修正
-- GOLDEN AXE THE DUEL: キャラクターの表示が乱れる問題を修正
-- SONIC JAM: キャラクターの動きがカクつく問題を修正 (欧州版)
+- 画面が真っ黒になる問題を修正 (ダイハード・トリロジー、レイヤーセクションII など)
+- アゼル -パンツァードラグーンRPG- / ガングリフォン II がフリーズする問題を修正
+- ソニックジャムのフレームレート低下と画面のちらつき (アスタル、ストリートファイターZERO3 など) を修正
+- ソニック3Dブラストのオープニングムービーが止まる問題とキャラクターが地面に隠れる問題を修正
+- 音声の途切れやプチプチというノイズを修正し、フレームレートを 60fps で安定化
+- どこでもセーブの保存漏れを修正し信頼性を向上
+- ミスター・ボーンズ などでキャラクターが表示されない問題を修正
+- ゲーム終了時にアプリが応答しなくなる問題を修正

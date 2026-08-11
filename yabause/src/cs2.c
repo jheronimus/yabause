@@ -4586,7 +4586,7 @@ int Cs2SaveState(FILE * fp) {
 
    // This is mostly kludge, but it will have to do until I have time to rewrite it all
 
-   offset = StateWriteHeader(fp, "CS2 ", 3);
+   offset = StateWriteHeader(fp, "CS2 ", 4);
 
    // Write cart type
    ywrite(&check, (void *) &Cs2Area->carttype, 4, 1, fp);
@@ -4690,6 +4690,23 @@ int Cs2SaveState(FILE * fp) {
    ywrite(&check, (void *)&Cs2Area->playtype, 4, 1, fp);
 
    ywrite(&check, (void *)&Cs2Area->_command_execlock, 4, 1, fp);
+
+   // Version 4: a play paused by a full sector buffer resumes on its own once
+   // the game frees space. Only "status" was serialized, so a state saved
+   // while the drive was in that auto-resume pause reloaded as a plain PAUSE
+   // that nothing ever resumed (the periodic handler needs this flag), hanging
+   // any loader that was streaming at save time.
+   ywrite(&check, (void *)&Cs2Area->bufferfullpause, 4, 1, fp);
+
+   // Version 4: time left in an in-progress seek. Without it a state saved
+   // mid-seek reloads with the seek already finished, so the drive skips the
+   // periodic status reports the game expects to see during a long seek.
+   ywrite(&check, (void *)&Cs2Area->_seekremaining, 4, 1, fp);
+
+   // Version 4: status the drive switches to when the current seek finishes.
+   // Cs2Reset() puts it back to 0xFF (none), so a state saved during a
+   // seek-then-pause reloaded as a seek that ended in PLAY instead.
+   ywrite(&check, (void *)&Cs2Area->nextStatus, 1, 1, fp);
 
    return StateFinishHeader(fp, offset);
 }
@@ -4837,7 +4854,15 @@ int Cs2LoadState(FILE * fp, int version, int size) {
    yread(&check, (void *)&Cs2Area->playtype, 4, 1, fp);
 
    if (version > 2) yread(&check, (void *)&Cs2Area->_command_execlock, 4, 1, fp);
-   
+
+   // Version 4: buffer-full auto-resume pending flag (see Cs2SaveState).
+   // Older states have it cleared by the Cs2Reset() above, which matches the
+   // pre-v4 behavior.
+   if (version > 3) {
+      yread(&check, (void *)&Cs2Area->bufferfullpause, 4, 1, fp);
+      yread(&check, (void *)&Cs2Area->_seekremaining, 4, 1, fp);
+      yread(&check, (void *)&Cs2Area->nextStatus, 1, 1, fp);
+   }
 
    return size;
 }

@@ -48,10 +48,28 @@ VkShaderModule ShaderManager::getShader(uint32_t id) {
 }
 
 ShaderManager::~ShaderManager() {
-  const VkDevice device = vulkan->getDevice();
-  for (int i = 0; i < shaders.size(); i++) {
-    vkDestroyShaderModule(device, shaders[i], nullptr);
+  // `shaders` is keyed by (prgid | shaderKind << 16), plus a 0x40000000-tagged
+  // key for the issue #22 G-buffer fragment variants (see createGraphicsPipeline).
+  // That key space is sparse -- it is never a dense 0..size-1 range.
+  //
+  // The previous loop walked it as `for (int i = 0; i < shaders.size(); i++)
+  // vkDestroyShaderModule(device, shaders[i], nullptr)`. map::operator[] INSERTS
+  // a default (VK_NULL_HANDLE) entry on every miss, so size() grew by one for
+  // every increment of i and the loop could only end once i had passed the
+  // largest key. Without G-buffer pipelines that is ~327k harmless iterations;
+  // with one G-buffer key present it is 1,073,807,364 iterations and roughly
+  // 48GB of map nodes, so shutdown never finished and the app had to be killed.
+  //
+  // Iterate the map itself: exactly one visit per real entry, no insertion.
+  if (vulkan != nullptr) {
+    const VkDevice device = vulkan->getDevice();
+    for (const auto &entry : shaders) {
+      if (entry.second != VK_NULL_HANDLE) {
+        vkDestroyShaderModule(device, entry.second, nullptr);
+      }
+    }
   }
+  shaders.clear();
 }
 
 

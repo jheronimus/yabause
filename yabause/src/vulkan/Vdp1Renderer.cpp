@@ -3773,6 +3773,24 @@ void Vdp1Renderer::readPriority(vdp1cmd_struct *cmd, int *priority, int *colorcl
     return;
   }
 
+  // Texture part drawn in RGB color mode (CMDPMOD color mode 5): CMDCOLR is
+  // *ignored* by the hardware (VDP1 manual 6.4 "RGB mode -> this word is
+  // ignored"), the raw 16-bit texel reaches the frame buffer unchanged. VDP2
+  // then sees MSB=1 and treats the priority / color calculation / shadow bits
+  // as 0 (VDP2 manual 9.1), i.e. register slot 0 -- same as mednafen
+  // T_DrawSpriteData. Without this, whatever stale value the game left in the
+  // ignored CMDCOLR field selects the sprite priority slot, so RGB sprites
+  // float above VDP2 layers they should sit behind. Command types 0..3 are the
+  // textured parts; for polygon/polyline/line CMDCOLR *is* the color and the
+  // CMDPMOD color mode field carries no meaning, so they must not take this
+  // path.
+  if ((SPCLMD & 0x20) && ((cmd->CMDCTRL & 0xF) <= 3) &&
+      (((cmd->CMDPMOD >> 3) & 0x7) == 5)) {
+    *priority = 0;
+    *colorcl = 0;
+    return;
+  }
+
   if (((cmd->CMDPMOD >> 3) & 0x7) == 1) {
     u32 charAddr, dot, colorLut;
 
@@ -4342,8 +4360,29 @@ void Vdp1Renderer::readTexture(vdp1cmd_struct *cmd, YglSprite *sprite, CharTextu
           if (dot & 0x8000 && (fixVdp2Regs->SPCTL & 0x20)) {
             *texture->textdata++ = VDP1COLOR(0, colorcl, priority, 0, 0, VDP1COLOR16TO24(dot));
           } else {
-            // Vdp1MaskSpritePixel(fixVdp2Regs->SPCTL & 0xF, &dot, &colorcl); //ToDo
-            *texture->textdata++ = VDP1COLOR(1, colorcl, priority, 0, 0, dot);
+            // 16bpp palette pixel: apply the per-pixel Vdp1ProcessSpritePixel
+            // split, exactly like the 4bpp LUT path (case 1 above) and the
+            // compute rasterizer's sample16bppRGB. Emitting the command-level
+            // priority/colorcl together with the full unmasked 16-bit index
+            // made palette sprite types > 0 (Mr. Bones forest skeleton =
+            // sprite type 7) lose the per-pixel priority slot (dot>>12)&7, so
+            // they were discarded whenever that PRISA slot held 0.
+            // Per-pixel locals: the decode must not clobber the command-level
+            // priority/colorcl that the other branches of this loop still use
+            // (the compute shader is stateless per pixel, so this keeps the
+            // graphics path bit-identical to it).
+            // CMDPMOD MSB shadow and the normal-shadow color are already
+            // handled by the branch above, so only the sprite-type normal
+            // shadow flag is consulted here -- same as the compute path.
+            u16 temp = (u16)dot;
+            int px_shadow = 0, px_normalshadow = 0, px_priority = 0, px_colorcl = 0;
+            Vdp1ProcessSpritePixel(fixVdp2Regs->SPCTL & 0xF, &temp, &px_shadow, &px_normalshadow, &px_priority,
+                                   &px_colorcl);
+            if (px_normalshadow) {
+              *texture->textdata++ = VDP1COLOR(1, 0, px_priority, 1, 0, 0);
+            } else {
+              *texture->textdata++ = VDP1COLOR(1, px_colorcl, px_priority, 0, 0, temp);
+            }
           }
         }
       }
