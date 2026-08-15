@@ -451,7 +451,7 @@ INCFLAGS := $(foreach dir,$(INCLUDE_DIRS),-I$(dir))
 # errors by default; upstream core files (ygles.c, vidogl.c, yglshaderes.c)
 # carry a few mismatches that are benign in practice.  They are warning
 # classes, so suppressing them keeps the core files byte-identical to
-# upstream (ADR 0015) while still building with modern toolchains.
+# upstream (ADR 0023) while still building with modern toolchains.
 WARNINGS := -Wno-incompatible-pointer-types -Wno-discarded-qualifiers
 FLAGS += $(INCFLAGS) -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(WARNINGS) \
 	-DNO_CLI -DHAVE_BUILTIN_BSWAP16=1 -DHAVE_BUILTIN_BSWAP32=1 -DHAVE_C99_VARIADIC_MACROS=1 \

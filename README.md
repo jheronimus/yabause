@@ -30,7 +30,7 @@ core glue, maintained as part of the Minime project.
 4. Update `yabause/src/libretro/Makefile.common` for renamed/moved files.
 5. Verify the build; commit to `main`.
 
-See `docs/adr/0015-yabasanshiro-libretro-port.md` in Minime for the full
+See `docs/adr/0023-yabasanshiro-libretro-port.md` in Minime for the full
 rationale.
 
 ## Build
