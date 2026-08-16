@@ -207,3 +207,12 @@ endif
 		$(LIBCHDR_DIR)/deps/zstd-1.5.6/lib/decompress/zstd_decompress_block.c
 endif
 
+# m68kmusashi.c includes both musashi/m68kcpu.h (which `#define uint
+# unsigned int`) and memory.h -> <stdlib.h> -> glibc <sys/types.h> (which
+# declares `typedef unsigned int uint;`); the macro expansion then collides
+# on glibc. m68kmusashi.c only needs the m68k.h API, so compile this one TU
+# with m68kcpu.h's include guard pre-defined to keep the `uint` macro out of
+# it. Glue-only fix -- musashi stays byte-identical to upstream (ADR 0023).
+$(SOURCE_DIR)/m68kmusashi.c.o: $(SOURCE_DIR)/m68kmusashi.c
+	$(CC) -c -o $@ $< $(CFLAGS) -DM68KCPU__HEADER
+

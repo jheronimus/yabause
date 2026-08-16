@@ -68,6 +68,17 @@ ifneq (,$(findstring unix,$(platform)))
 	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=link.T
 	LDFLAGS += -lpthread -lGL
 	ARCH_IS_LINUX = 1
+	# thr-linux.cpp (the pthread thread impl) is used instead of
+	# libretro-common's syscall-based rthreads (which omits YabNanosleep /
+	# YabMakeCleanDir / YabCopyFile that only thr-linux.cpp provides).
+	USE_RTHREADS = 0
+	# thr-linux.cpp calls pthread_setname_np, which is only declared under
+	# _GNU_SOURCE on both glibc and musl.
+	FLAGS += -D_GNU_SOURCE
+	# Vendored zlib's gzlib.c/gzread.c call read/lseek/close without including
+	# <unistd.h>; force-include it (GCC 14+ makes the implicit declaration a
+	# hard error on Linux too, not just macOS).
+	FLAGS += -include unistd.h
 	# Building the unix target on macOS uses the system GL headers, which
 	# lack the KHR_debug and GL 4.3 compute enums the core uses; provide
 	# them (real Linux GL headers already have these).
@@ -125,6 +136,11 @@ else ifeq ($(platform), arm64)
 	USE_AARCH64_DRC = 1
 	DYNAREC_DEVMIYAX = 1
 	ALLOW_POLYGON_MODE = 0
+	# Same thread-implementation choice as the unix target: thr-linux.cpp
+	# provides YabNanosleep/YabMakeCleanDir/YabCopyFile that rthreads omits,
+	# and pthread_setname_np needs _GNU_SOURCE on glibc and musl.
+	USE_RTHREADS = 0
+	FLAGS += -D_GNU_SOURCE
 	# Vendored zlib's gzlib.c/gzread.c call lseek/read without including
 	# <unistd.h>; force-include it (same shim the macOS path uses).
 	FLAGS += -include unistd.h
@@ -460,6 +476,10 @@ FLAGS += $(INCFLAGS) -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(WARNINGS) \
 
 CXXFLAGS += $(FLAGS) -std=gnu++17
 CFLAGS += $(FLAGS) -std=gnu99
+
+# The m68kmusashi.c.o rule in Makefile.common precedes this target in the
+# file, so pin the default goal to all.
+.DEFAULT_GOAL := all
 
 all: $(TARGET)
 

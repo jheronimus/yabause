@@ -11,10 +11,13 @@
 #endif
 
 #include <sys/stat.h>
+#include <dlfcn.h>
 
 #include <libretro.h>
 
 #include <file/file_path.h>
+
+#include "glsym/rglgen.h"
 
 #include "cdbase.h"
 #include "cheat.h"
@@ -33,6 +36,9 @@
 #include "ygl.h"
 
 yabauseinit_struct yinit;
+
+/* Backup RAM size (bios.c); exposed to the frontend via the memory API. */
+extern int tweak_backup_file_size;
 
 static char slash = path_default_slash_c();
 
@@ -53,6 +59,32 @@ static bool renderer_running = false;
 static bool hle_bios_force = false;
 static bool one_frame_rendered = false;
 
+/* Software-rendering path (ADR 0023): minarch/Allium accept software frames
+   only and provide no GL context, so when the hardware-render request is
+   refused we fall back to the Titan software renderer and convert its
+   RGBA8888 framebuffer to RGB565 for the frontend. */
+static bool use_software_renderer = false;
+static u16 *rgb565_frame = NULL;
+static size_t rgb565_frame_cap = 0;
+
+/* Software-mode glsym resolution: resolve against the linked libGL (the
+   core already links -lGL). Mesa's entry points tolerate a missing current
+   context (they no-op), so vidsoft's presentation blit is harmless and the
+   actual frame is pushed in YuiSwapBuffers. */
+static void *glsym_soft_lib = NULL;
+static bool glsym_resolved = false;
+
+static rglgen_func_t soft_get_proc_address(const char *name) {
+  if (!glsym_soft_lib)
+    glsym_soft_lib = dlopen("libGL.so.1", RTLD_LAZY | RTLD_LOCAL);
+  if (glsym_soft_lib) {
+    rglgen_func_t addr = (rglgen_func_t)dlsym(glsym_soft_lib, name);
+    if (addr)
+      return addr;
+  }
+  return (rglgen_func_t)dlsym(RTLD_DEFAULT, name);
+}
+
 static bool libretro_supports_bitmasks = false;
 static int16_t libretro_input_bitmask[12] = {-1, -1, -1, -1, -1, -1,
                                              -1, -1, -1, -1, -1, -1};
@@ -64,6 +96,11 @@ static int g_sh2coretype = SH2CORE_INTERPRETER;
 #endif
 
 static int g_frame_skip = 1;
+/* Renderer selection (ADR 0023): software (Titan) is the Minime default —
+   both MinUI and Allium accept software frames only. The OpenGL renderer is
+   kept compiled and reachable via the yabasanshiro_renderer option for
+   GL-capable frontends (e.g. RetroArch). */
+static int g_renderer_mode = 0; /* 0 = software, 1 = OpenGL */
 static int g_rbg_resolution_mode = 0;
 static int g_rbg_use_compute_shader = 1;
 static int addon_cart_type = CART_DRAM32MBIT;
@@ -99,7 +136,9 @@ extern struct retro_hw_render_callback hw_render;
 void retro_set_environment(retro_environment_t cb) {
   static const struct retro_variable vars[] = {
       {"yabasanshiro_force_hle_bios",
-       "Force HLE BIOS (restart, deprecated, debug only); disabled|enabled"},
+       "Force HLE BIOS (restart); disabled|enabled"},
+      {"yabasanshiro_renderer",
+       "Renderer (restart); software|gl"},
       {"yabasanshiro_frameskip",
        "Auto-frameskip (prevent fast-forwarding); enabled|disabled"},
       {"yabasanshiro_addon_cart",
@@ -383,7 +422,7 @@ static s16 *sound_buf;
 static int SNDLIBRETROInit(void) {
   int vertfreq = (yabsys.IsPal == 1 ? 50 : 60);
   soundlen = (SAMPLERATE * 100 + (vertfreq >> 1)) / vertfreq;
-  soundbufsize = (soundlen << 2 * sizeof(s16));
+  soundbufsize = soundlen * 2 * sizeof(s16);
   if ((sound_buf = (s16 *)malloc(soundbufsize)) == NULL)
     return -1;
   memset(sound_buf, 0, soundbufsize);
@@ -399,7 +438,7 @@ static int SNDLIBRETROReset(void) { return 0; }
 
 static int SNDLIBRETROChangeVideoFormat(int vertfreq) {
   soundlen = (SAMPLERATE * 100 + (vertfreq >> 1)) / vertfreq;
-  soundbufsize = (soundlen << 2 * sizeof(s16));
+  soundbufsize = soundlen * 2 * sizeof(s16);
   if (sound_buf)
     free(sound_buf);
   if ((sound_buf = (s16 *)malloc(soundbufsize)) == NULL)
@@ -520,17 +559,25 @@ static int first_ctx_reset = 1;
 
 int YuiUseOGLOnThisThread() {
 #if !defined(_USEGLEW_)
+  if (use_software_renderer)
+    return 0; // no GL context
   return glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
 #endif
 }
 
 int YuiRevokeOGLOnThisThread() {
 #if !defined(_USEGLEW_)
+  if (use_software_renderer)
+    return 0; // no GL context
   return glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
 #endif
 }
 
-int YuiGetFB(void) { return hw_render.get_current_framebuffer(); }
+int YuiGetFB(void) {
+  if (use_software_renderer || !hw_render.get_current_framebuffer)
+    return 0; // no GL context
+  return hw_render.get_current_framebuffer();
+}
 
 void retro_reinit_av_info(void) {
   struct retro_system_av_info av_info;
@@ -539,6 +586,14 @@ void retro_reinit_av_info(void) {
 }
 
 void retro_set_resolution() {
+  if (use_software_renderer) {
+    /* The software renderer presents at native VDP2 resolution; the
+       frontend's scaler handles upscaling to the panel. */
+    current_width = game_width;
+    current_height = game_height;
+    retro_reinit_av_info();
+    return;
+  }
   // If resolution_mode > initial_resolution_mode, we'll need a restart to
   // reallocate the max size for buffer
   if (resolution_mode > initial_resolution_mode) {
@@ -570,12 +625,43 @@ void retro_set_resolution() {
   VIDCore->SetSettingValue(VDP_SETTING_RESOLUTION_MODE, g_resolution_mode);
 }
 
+/* Convert the software renderer's RGBA8888 dispbuffer to the RGB565 the
+   frontends expect (minarch supports only RGB565). */
+static void rgb8888_to_rgb565(const u32 *src, u16 *dst, size_t pixels) {
+  size_t i;
+  for (i = 0; i < pixels; i++) {
+    u32 px = src[i];
+    u16 r = (px >> 16) & 0xFF;
+    u16 g = (px >> 8) & 0xFF;
+    u16 b = px & 0xFF;
+    dst[i] = (u16)(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+  }
+}
+
 void YuiSwapBuffers(void) {
   int prev_game_width = game_width;
   int prev_game_height = game_height;
   VIDCore->GetNativeResolution(&game_width, &game_height, &game_interlace);
   if ((prev_game_width != game_width) || (prev_game_height != game_height))
     retro_set_resolution();
+
+  if (use_software_renderer) {
+    size_t pixels = (size_t)game_width * game_height;
+    size_t bytes = pixels * sizeof(u16);
+    if (!rgb565_frame || rgb565_frame_cap < bytes) {
+      free(rgb565_frame);
+      rgb565_frame = (u16 *)malloc(bytes);
+      rgb565_frame_cap = rgb565_frame ? bytes : 0;
+    }
+    if (rgb565_frame && dispbuffer) {
+      rgb8888_to_rgb565((const u32 *)dispbuffer, rgb565_frame, pixels);
+      video_cb(rgb565_frame, (unsigned)game_width, (unsigned)game_height,
+               (unsigned)game_width * (unsigned)sizeof(u16));
+    }
+    one_frame_rendered = true;
+    return;
+  }
+
   audio_size = soundlen;
   video_cb(RETRO_HW_FRAME_BUFFER_VALID, current_width, current_height, 0);
   one_frame_rendered = true;
@@ -660,7 +746,7 @@ void retro_get_system_info(struct retro_system_info *info) {
   info->library_version = "v" VERSION GIT_VERSION;
   info->need_fullpath = true;
   info->block_extract = false;
-  info->valid_extensions = "cue|iso|mds|ccd";
+  info->valid_extensions = "cue|iso|mds|ccd|bin|chd";
 }
 
 void check_variables(void) {
@@ -673,6 +759,15 @@ void check_variables(void) {
       hle_bios_force = false;
     else if (strcmp(var.value, "enabled") == 0 && !hle_bios_force)
       hle_bios_force = true;
+  }
+
+  var.key = "yabasanshiro_renderer";
+  var.value = NULL;
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value) {
+    if (strcmp(var.value, "software") == 0)
+      g_renderer_mode = 0;
+    else if (strcmp(var.value, "gl") == 0)
+      g_renderer_mode = 1;
   }
 
   var.key = "yabasanshiro_frameskip";
@@ -818,8 +913,6 @@ void retro_set_controller_port_device(unsigned port, unsigned device) {
 }
 
 size_t retro_serialize_size(void) {
-  // Disabling savestates until they are safe
-  return 0;
   void *buffer;
   size_t size;
 
@@ -833,8 +926,6 @@ size_t retro_serialize_size(void) {
 }
 
 bool retro_serialize(void *data, size_t size) {
-  // Disabling savestates until they are safe
-  return true;
   void *buffer;
   size_t out_size;
 
@@ -847,8 +938,6 @@ bool retro_serialize(void *data, size_t size) {
 }
 
 bool retro_unserialize(const void *data, size_t size) {
-  // Disabling savestates until they are safe
-  return true;
   int error = YabLoadStateBuffer(data, size);
   retro_set_resolution();
 
@@ -919,13 +1008,31 @@ void retro_init(void) {
 }
 
 bool retro_load_game_common() {
-  enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
+  /* Software rendering is the Minime default (ADR 0023): minarch/Allium
+     accept software frames only. We request RGB565 (both UIs support it)
+     and convert the software framebuffer in YuiSwapBuffers. */
+  enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
   if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
     return false;
-  if (!retro_init_hw_context())
-    return false;
 
-  yinit.vidcoretype = VIDCORE_OGL;
+  /* Software rendering is the Minime default (ADR 0023): minarch/Allium
+     accept software frames only and provide no GL context. The GL renderer
+     is used only when the option requests it AND the frontend provides a
+     hardware context. */
+  use_software_renderer = true;
+  if (g_renderer_mode == 1) {
+    if (retro_init_hw_context()) {
+      log_cb(RETRO_LOG_INFO, "OpenGL renderer requested and available\n");
+      use_software_renderer = false;
+    } else {
+      log_cb(RETRO_LOG_WARN,
+             "OpenGL renderer unavailable; using the software renderer\n");
+    }
+  } else {
+    log_cb(RETRO_LOG_INFO, "Using the software renderer\n");
+  }
+
+  yinit.vidcoretype = use_software_renderer ? VIDCORE_SOFT : VIDCORE_OGL;
   yinit.percoretype = PERCORE_LIBRETRO;
   yinit.sh2coretype = g_sh2coretype;
   yinit.sndcoretype = SNDCORE_LIBRETRO;
@@ -951,6 +1058,26 @@ bool retro_load_game_common() {
   yinit.videoformattype = VIDEOFORMATTYPE_NTSC;
   yinit.video_filter_type = 0;
 
+  if (use_software_renderer) {
+    /* No GL context: the frontend never calls context_reset, so init the
+       emulator here instead. vidsoft.c hard-defines USE_OPENGL and presents
+       dispbuffer via a GL blit, so its glsym pointers must be resolved.
+       Resolve them against the linked libGL (already a DT_NEEDED of this
+       .so); without a current context Mesa's entry points no-op safely and
+       the real frame is pushed in YuiSwapBuffers. */
+    if (!glsym_resolved) {
+      rglgen_resolve_symbols(soft_get_proc_address);
+      glsym_resolved = true;
+    }
+    if (YabauseInit(&yinit) != 0) {
+      log_cb(RETRO_LOG_ERROR, "YabauseInit failed\n");
+      return false;
+    }
+    renderer_running = true;
+    retro_set_resolution();
+    OSDChangeCore(OSDCORE_DUMMY);
+  }
+
   return true;
 }
 
@@ -960,6 +1087,7 @@ bool retro_load_game(const struct retro_game_info *info) {
 
   check_variables();
 
+  bool bios_found = false;
   snprintf(full_path, sizeof(full_path), "%s", info->path);
   snprintf(bios_path, sizeof(bios_path), "%s%csaturn_bios.bin", g_system_dir,
            slash);
@@ -973,21 +1101,23 @@ bool retro_load_game(const struct retro_game_info *info) {
                slash);
       if (does_file_exist(bios_path) != 1) {
         log_cb(RETRO_LOG_WARN, "%s NOT FOUND\n", bios_path);
-      }
-    }
-  }
+      } else
+        bios_found = true;
+    } else
+      bios_found = true;
+  } else
+    bios_found = true;
 
-  // Real bios is REQUIRED, even if we support HLE bios
-  // HLE bios is deprecated and causing more issues than it solves
-  // No "autoselect HLE when bios is missing" ever again !
-  if (does_file_exist(bios_path) != 1) {
-    log_cb(RETRO_LOG_ERROR, "We are missing the bios, ABORTING\n");
-    return false;
+  /* Real BIOS is preferred; fall back to HLE when absent, matching the
+     upstream standalone (Android runs HLE when no BIOS file is configured).
+     HLE is incomplete, so warn when it is active. */
+  if (!bios_found && !hle_bios_force) {
+    log_cb(RETRO_LOG_WARN,
+           "Saturn BIOS not found; using HLE BIOS (compatibility varies)\n");
   }
-  if (hle_bios_force) {
-    log_cb(RETRO_LOG_WARN, "HLE bios is enabled, this is for debugging purpose "
-                           "only, expect lots of issues\n");
-  }
+  if (hle_bios_force)
+    log_cb(RETRO_LOG_WARN,
+           "HLE BIOS forced, expect compatibility issues\n");
 
   snprintf(bup_path, sizeof(bup_path), "%s%cyabasanshiro%cbackup.bin",
            g_save_dir, slash, slash);
@@ -1264,7 +1394,8 @@ bool retro_load_game(const struct retro_game_info *info) {
 
   yinit.cdcoretype = CDCORE_ISO;
   yinit.cdpath = full_path;
-  yinit.biospath = (hle_bios_force ? NULL : bios_path);
+  yinit.biospath =
+      (hle_bios_force || !bios_found) ? NULL : bios_path;
   yinit.carttype = addon_cart_type;
   yinit.cartpath = "\0";
 
@@ -1287,11 +1418,27 @@ unsigned retro_get_region(void) { return RETRO_REGION_NTSC; }
 
 unsigned retro_api_version(void) { return RETRO_API_VERSION; }
 
-void *retro_get_memory_data(unsigned id) { return NULL; }
+/* Backup RAM (BupRam, mmap'd from backup.bin) is exposed as save RAM so the
+   frontend persists per-game .sav files (minarch's SRAM read/write path). */
+void *retro_get_memory_data(unsigned id) {
+  if (id == RETRO_MEMORY_SAVE_RAM)
+    return BupRam;
+  return NULL;
+}
 
-size_t retro_get_memory_size(unsigned id) { return 0; }
+size_t retro_get_memory_size(unsigned id) {
+  if (id == RETRO_MEMORY_SAVE_RAM)
+    return tweak_backup_file_size;
+  return 0;
+}
 
-void retro_deinit(void) { libretro_supports_bitmasks = false; }
+void retro_deinit(void) {
+  libretro_supports_bitmasks = false;
+  use_software_renderer = false;
+  free(rgb565_frame);
+  rgb565_frame = NULL;
+  rgb565_frame_cap = 0;
+}
 
 void retro_reset(void) {
   YabauseReset();
@@ -1301,6 +1448,8 @@ void retro_reset(void) {
 }
 
 void reset_global_gl_state() {
+  if (use_software_renderer)
+    return; // no GL context: the glsym pointers are unresolved
   glUseProgram(0);
   glGetError();
   glBindBuffer(GL_ARRAY_BUFFER, 0);
