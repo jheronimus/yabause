@@ -10,8 +10,8 @@
 #define snprintf _snprintf
 #endif
 
-#include <sys/stat.h>
 #include <dlfcn.h>
+#include <sys/stat.h>
 
 #include <libretro.h>
 
@@ -137,8 +137,7 @@ void retro_set_environment(retro_environment_t cb) {
   static const struct retro_variable vars[] = {
       {"yabasanshiro_force_hle_bios",
        "Force HLE BIOS (restart); disabled|enabled"},
-      {"yabasanshiro_renderer",
-       "Renderer (restart); software|gl"},
+      {"yabasanshiro_renderer", "Renderer (restart); software|gl"},
       {"yabasanshiro_frameskip",
        "Auto-frameskip (prevent fast-forwarding); enabled|disabled"},
       {"yabasanshiro_addon_cart",
@@ -1116,8 +1115,7 @@ bool retro_load_game(const struct retro_game_info *info) {
            "Saturn BIOS not found; using HLE BIOS (compatibility varies)\n");
   }
   if (hle_bios_force)
-    log_cb(RETRO_LOG_WARN,
-           "HLE BIOS forced, expect compatibility issues\n");
+    log_cb(RETRO_LOG_WARN, "HLE BIOS forced, expect compatibility issues\n");
 
   snprintf(bup_path, sizeof(bup_path), "%s%cyabasanshiro%cbackup.bin",
            g_save_dir, slash, slash);
@@ -1394,8 +1392,7 @@ bool retro_load_game(const struct retro_game_info *info) {
 
   yinit.cdcoretype = CDCORE_ISO;
   yinit.cdpath = full_path;
-  yinit.biospath =
-      (hle_bios_force || !bios_found) ? NULL : bios_path;
+  yinit.biospath = (hle_bios_force || !bios_found) ? NULL : bios_path;
   yinit.carttype = addon_cart_type;
   yinit.cartpath = "\0";
 
