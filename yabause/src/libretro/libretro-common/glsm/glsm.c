@@ -1,34 +1,40 @@
 /* Copyright (C) 2010-2018 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this libretro SDK code part (glsm).
+ * The following license statement only applies to this libretro SDK code part
+ * (glsm).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
- * to any person obtaining a copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * to any person obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to permit
+ * persons to whom the Software is furnished to do so, subject to the following
+ * conditions:
  *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+ * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <glsm/glsm.h>
+#include <glsym/glsym.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <glsym/glsym.h>
-#include <glsm/glsm.h>
+#include <string.h>
 
 #ifndef GL_DEPTH_CLAMP
-#define GL_DEPTH_CLAMP                    0x864F
-#define GL_RASTERIZER_DISCARD             0x8C89
-#define GL_SAMPLE_MASK                    0x8E51
+#define GL_DEPTH_CLAMP 0x864F
+#define GL_RASTERIZER_DISCARD 0x8C89
+#define GL_SAMPLE_MASK 0x8E51
 #endif
 
 #if 0
@@ -36,167 +42,145 @@ extern retro_log_printf_t log_cb;
 #define GLSM_DEBUG
 #endif
 
-struct gl_cached_state
-{
-   struct
-   {
-      GLuint *ids;
-   } bind_textures;
+struct gl_cached_state {
+  struct {
+    GLuint *ids;
+  } bind_textures;
 
-   struct
-   {
-      bool used[MAX_ATTRIB];
-      GLint size[MAX_ATTRIB];
-      GLenum type[MAX_ATTRIB];
-      GLboolean normalized[MAX_ATTRIB];
-      GLsizei stride[MAX_ATTRIB];
-      const GLvoid *pointer[MAX_ATTRIB];
-      GLuint buffer[MAX_ATTRIB];
-   } attrib_pointer;
+  struct {
+    bool used[MAX_ATTRIB];
+    GLint size[MAX_ATTRIB];
+    GLenum type[MAX_ATTRIB];
+    GLboolean normalized[MAX_ATTRIB];
+    GLsizei stride[MAX_ATTRIB];
+    const GLvoid *pointer[MAX_ATTRIB];
+    GLuint buffer[MAX_ATTRIB];
+  } attrib_pointer;
 
 #ifndef HAVE_OPENGLES
-   GLenum colorlogicop;
+  GLenum colorlogicop;
 #endif
 
-   struct
-   {
-      bool enabled[MAX_ATTRIB];
-   } vertex_attrib_pointer;
+  struct {
+    bool enabled[MAX_ATTRIB];
+  } vertex_attrib_pointer;
 
-   struct
-   {
-      GLenum pname;
-      GLint param;
-   } pixelstore_i;
+  struct {
+    GLenum pname;
+    GLint param;
+  } pixelstore_i;
 
-   struct
-   {
-      GLuint r;
-      GLuint g;
-      GLuint b;
-      GLuint a;
-   } clear_color;
+  struct {
+    GLuint r;
+    GLuint g;
+    GLuint b;
+    GLuint a;
+  } clear_color;
 
-   struct
-   {
-      bool used;
-      GLint x;
-      GLint y;
-      GLsizei w;
-      GLsizei h;
-   } scissor;
+  struct {
+    bool used;
+    GLint x;
+    GLint y;
+    GLsizei w;
+    GLsizei h;
+  } scissor;
 
-   struct
-   {
-      GLint x;
-      GLint y;
-      GLsizei w;
-      GLsizei h;
-   } viewport;
+  struct {
+    GLint x;
+    GLint y;
+    GLsizei w;
+    GLsizei h;
+  } viewport;
 
-   struct
-   {
-      bool used;
-      GLenum sfactor;
-      GLenum dfactor;
-   } blendfunc;
+  struct {
+    bool used;
+    GLenum sfactor;
+    GLenum dfactor;
+  } blendfunc;
 
-   struct
-   {
-      bool used;
-      GLenum srcRGB;
-      GLenum dstRGB;
-      GLenum srcAlpha;
-      GLenum dstAlpha;
-   } blendfunc_separate;
+  struct {
+    bool used;
+    GLenum srcRGB;
+    GLenum dstRGB;
+    GLenum srcAlpha;
+    GLenum dstAlpha;
+  } blendfunc_separate;
 
-   struct
-   {
-      bool used;
-      GLboolean red;
-      GLboolean green;
-      GLboolean blue;
-      GLboolean alpha;
-   } colormask;
+  struct {
+    bool used;
+    GLboolean red;
+    GLboolean green;
+    GLboolean blue;
+    GLboolean alpha;
+  } colormask;
 
-   struct
-   {
-      bool used;
-      GLdouble depth;
-   } cleardepth;
+  struct {
+    bool used;
+    GLdouble depth;
+  } cleardepth;
 
-   struct
-   {
-      bool used;
-      GLenum func;
-   } depthfunc;
+  struct {
+    bool used;
+    GLenum func;
+  } depthfunc;
 
-   struct
-   {
-      bool used;
-      GLclampd zNear;
-      GLclampd zFar;
-   } depthrange;
+  struct {
+    bool used;
+    GLclampd zNear;
+    GLclampd zFar;
+  } depthrange;
 
-   struct
-   {
-      bool used;
-      GLfloat factor;
-      GLfloat units;
-   } polygonoffset;
+  struct {
+    bool used;
+    GLfloat factor;
+    GLfloat units;
+  } polygonoffset;
 
-   struct
-   {
-      bool used;
-      GLenum func;
-      GLint ref;
-      GLuint mask;
-   } stencilfunc;
+  struct {
+    bool used;
+    GLenum func;
+    GLint ref;
+    GLuint mask;
+  } stencilfunc;
 
-   struct
-   {
-      bool used;
-      GLenum sfail;
-      GLenum dpfail;
-      GLenum dppass;
-   } stencilop;
+  struct {
+    bool used;
+    GLenum sfail;
+    GLenum dpfail;
+    GLenum dppass;
+  } stencilop;
 
-   struct
-   {
-      bool used;
-      GLenum mode;
-   } frontface;
+  struct {
+    bool used;
+    GLenum mode;
+  } frontface;
 
-   struct
-   {
-      bool used;
-      GLenum mode;
-   } cullface;
+  struct {
+    bool used;
+    GLenum mode;
+  } cullface;
 
-   struct
-   {
-      bool used;
-      GLuint mask;
-   } stencilmask;
+  struct {
+    bool used;
+    GLuint mask;
+  } stencilmask;
 
-   struct
-   {
-      bool used;
-      GLboolean mask;
-   } depthmask;
+  struct {
+    bool used;
+    GLboolean mask;
+  } depthmask;
 
-   struct
-   {
-      GLenum mode;
-   } readbuffer;
+  struct {
+    GLenum mode;
+  } readbuffer;
 
-   GLuint vao;
-   GLuint framebuf;
-   GLuint array_buffer;
-   GLuint program;
-   GLenum active_texture;
-   int cap_state[SGL_CAP_MAX];
-   int cap_translate[SGL_CAP_MAX];
+  GLuint vao;
+  GLuint framebuf;
+  GLuint array_buffer;
+  GLuint program;
+  GLenum active_texture;
+  int cap_state[SGL_CAP_MAX];
+  int cap_translate[SGL_CAP_MAX];
 };
 
 static GLuint default_framebuffer;
@@ -211,10 +195,7 @@ static struct gl_cached_state gl_state;
  * Core in:
  * OpenGL    : 1.0
  */
-GLenum rglGetError(void)
-{
-   return glGetError();
-}
+GLenum rglGetError(void) { return glGetError(); }
 
 /*
  *
@@ -223,10 +204,9 @@ GLenum rglGetError(void)
  * OpenGLES  : N/A
  */
 
-void rglProvokingVertex(	GLenum provokeMode)
-{
+void rglProvokingVertex(GLenum provokeMode) {
 #if defined(HAVE_OPENGL)
-   glProvokingVertex(provokeMode);
+  glProvokingVertex(provokeMode);
 #endif
 }
 
@@ -236,10 +216,9 @@ void rglProvokingVertex(	GLenum provokeMode)
  * OpenGL    : 3.2
  * OpenGLES  : 3.0
  */
-void rglGetInteger64v(	GLenum pname, int64_t *data)
-{
+void rglGetInteger64v(GLenum pname, int64_t *data) {
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGetInteger64v(pname, (GLint64*)data);
+  glGetInteger64v(pname, (GLint64 *)data);
 #endif
 }
 
@@ -249,28 +228,21 @@ void rglGetInteger64v(	GLenum pname, int64_t *data)
  * OpenGL    : 3.2
  * OpenGLES  : 3.0
  */
-void rglSamplerParameteri(	GLuint sampler,
- 	GLenum pname,
- 	GLint param)
-{
+void rglSamplerParameteri(GLuint sampler, GLenum pname, GLint param) {
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glSamplerParameteri(sampler, pname, param);
+  glSamplerParameteri(sampler, pname, param);
 #endif
 }
 
-void rglGenSamplers(	GLsizei n,
- 	GLuint *samplers)
-{
+void rglGenSamplers(GLsizei n, GLuint *samplers) {
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGenSamplers(n, samplers);
+  glGenSamplers(n, samplers);
 #endif
 }
 
-void rglBindSampler(	GLuint unit,
- 	GLuint sampler)
-{
+void rglBindSampler(GLuint unit, GLuint sampler) {
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glBindSampler(unit, sampler);
+  glBindSampler(unit, sampler);
 #endif
 }
 
@@ -279,12 +251,11 @@ void rglBindSampler(	GLuint unit,
  * Core in:
  * OpenGL    : 1.0
  */
-void rglClear(GLbitfield mask)
-{
+void rglClear(GLbitfield mask) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glClear.\n");
+  log_cb(RETRO_LOG_INFO, "glClear.\n");
 #endif
-   glClear(mask);
+  glClear(mask);
 }
 
 /*
@@ -292,12 +263,11 @@ void rglClear(GLbitfield mask)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglValidateProgram(GLuint program)
-{
+void rglValidateProgram(GLuint program) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glValidateProgram.\n");
+  log_cb(RETRO_LOG_INFO, "glValidateProgram.\n");
 #endif
-   glValidateProgram(program);
+  glValidateProgram(program);
 }
 
 /*
@@ -306,44 +276,32 @@ void rglValidateProgram(GLuint program)
  * OpenGL    : 1.0
  * OpenGLES  : N/A
  */
-void rglPolygonMode(GLenum face, GLenum mode)
-{
+void rglPolygonMode(GLenum face, GLenum mode) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glPolygonMode.\n");
+  log_cb(RETRO_LOG_INFO, "glPolygonMode.\n");
 #endif
 #ifndef HAVE_OPENGLES
-   glPolygonMode(face, mode);
+  glPolygonMode(face, mode);
 #endif
 }
 
-void rglTexSubImage2D(
-      GLenum target,
-  	GLint level,
-  	GLint xoffset,
-  	GLint yoffset,
-  	GLsizei width,
-  	GLsizei height,
-  	GLenum format,
-  	GLenum type,
-  	const GLvoid * pixels)
-{
+void rglTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
+                      GLsizei width, GLsizei height, GLenum format, GLenum type,
+                      const GLvoid *pixels) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glTexSubImage2D.\n");
+  log_cb(RETRO_LOG_INFO, "glTexSubImage2D.\n");
 #endif
-   glTexSubImage2D(target, level, xoffset, yoffset,
-         width, height, format, type, pixels);
+  glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type,
+                  pixels);
 }
 
-void rglGetBufferSubData(	GLenum target,
- 	GLintptr offset,
- 	GLsizeiptr size,
- 	GLvoid * data)
-{
+void rglGetBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size,
+                         GLvoid *data) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetBufferSubData.\n");
+  log_cb(RETRO_LOG_INFO, "glGetBufferSubData.\n");
 #endif
 #if defined(HAVE_OPENGL)
-   glGetBufferSubData(target, offset, size, data);
+  glGetBufferSubData(target, offset, size, data);
 #endif
 }
 
@@ -352,12 +310,11 @@ void rglGetBufferSubData(	GLenum target,
  * Core in:
  * OpenGL    : 1.0
  */
-void rglLineWidth(GLfloat width)
-{
+void rglLineWidth(GLfloat width) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glLineWidth.\n");
+  log_cb(RETRO_LOG_INFO, "glLineWidth.\n");
 #endif
-   glLineWidth(width);
+  glLineWidth(width);
 }
 
 /*
@@ -367,20 +324,15 @@ void rglLineWidth(GLfloat width)
  * OpenGL    : 3.0
  * OpenGLES  : 3.0
  */
-void rglBlitFramebuffer(
-      GLint srcX0, GLint srcY0,
-      GLint srcX1, GLint srcY1,
-      GLint dstX0, GLint dstY0,
-      GLint dstX1, GLint dstY1,
-      GLbitfield mask, GLenum filter)
-{
+void rglBlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
+                        GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
+                        GLbitfield mask, GLenum filter) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBlitFramebuffer.\n");
+  log_cb(RETRO_LOG_INFO, "glBlitFramebuffer.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1,
-         dstX0, dstY0, dstX1, dstY1,
-         mask, filter);
+  glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1,
+                    mask, filter);
 #endif
 }
 
@@ -389,14 +341,13 @@ void rglBlitFramebuffer(
  * Core in:
  * OpenGLES  : 3.0
  */
-void rglReadBuffer(GLenum mode)
-{
+void rglReadBuffer(GLenum mode) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glReadBuffer.\n");
+  log_cb(RETRO_LOG_INFO, "glReadBuffer.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glReadBuffer(mode);
-   gl_state.readbuffer.mode = mode;
+  glReadBuffer(mode);
+  gl_state.readbuffer.mode = mode;
 #endif
 }
 
@@ -405,19 +356,18 @@ void rglReadBuffer(GLenum mode)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglClearDepth(GLdouble depth)
-{
+void rglClearDepth(GLdouble depth) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glClearDepth.\n");
+  log_cb(RETRO_LOG_INFO, "glClearDepth.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
 #ifdef HAVE_OPENGLES
-   glClearDepthf(depth);
+  glClearDepthf(depth);
 #else
-   glClearDepth(depth);
+  glClearDepth(depth);
 #endif
-   gl_state.cleardepth.used  = true;
-   gl_state.cleardepth.depth = depth;
+  gl_state.cleardepth.used = true;
+  gl_state.cleardepth.depth = depth;
 }
 
 /*
@@ -425,14 +375,13 @@ void rglClearDepth(GLdouble depth)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglPixelStorei(GLenum pname, GLint param)
-{
+void rglPixelStorei(GLenum pname, GLint param) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glPixelStorei.\n");
+  log_cb(RETRO_LOG_INFO, "glPixelStorei.\n");
 #endif
-   glPixelStorei(pname, param);
-   gl_state.pixelstore_i.pname = pname;
-   gl_state.pixelstore_i.param = param;
+  glPixelStorei(pname, param);
+  gl_state.pixelstore_i.pname = pname;
+  gl_state.pixelstore_i.param = param;
 }
 
 /*
@@ -440,19 +389,18 @@ void rglPixelStorei(GLenum pname, GLint param)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglDepthRange(GLclampd zNear, GLclampd zFar)
-{
+void rglDepthRange(GLclampd zNear, GLclampd zFar) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDepthRange.\n");
+  log_cb(RETRO_LOG_INFO, "glDepthRange.\n");
 #endif
 #ifdef HAVE_OPENGLES
-   glDepthRangef(zNear, zFar);
+  glDepthRangef(zNear, zFar);
 #else
-   glDepthRange(zNear, zFar);
+  glDepthRange(zNear, zFar);
 #endif
-   gl_state.depthrange.used  = true;
-   gl_state.depthrange.zNear = zNear;
-   gl_state.depthrange.zFar  = zFar;
+  gl_state.depthrange.used = true;
+  gl_state.depthrange.zNear = zNear;
+  gl_state.depthrange.zFar = zFar;
 }
 
 /*
@@ -460,15 +408,14 @@ void rglDepthRange(GLclampd zNear, GLclampd zFar)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglFrontFace(GLenum mode)
-{
+void rglFrontFace(GLenum mode) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glFrontFace.\n");
+  log_cb(RETRO_LOG_INFO, "glFrontFace.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glFrontFace(mode);
-   gl_state.frontface.used = true;
-   gl_state.frontface.mode = mode;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glFrontFace(mode);
+  gl_state.frontface.used = true;
+  gl_state.frontface.mode = mode;
 }
 
 /*
@@ -476,15 +423,14 @@ void rglFrontFace(GLenum mode)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglDepthFunc(GLenum func)
-{
+void rglDepthFunc(GLenum func) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDepthFunc.\n");
+  log_cb(RETRO_LOG_INFO, "glDepthFunc.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   gl_state.depthfunc.used = true;
-   gl_state.depthfunc.func = func;
-   glDepthFunc(func);
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  gl_state.depthfunc.used = true;
+  gl_state.depthfunc.func = func;
+  glDepthFunc(func);
 }
 
 /*
@@ -492,19 +438,18 @@ void rglDepthFunc(GLenum func)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglColorMask(GLboolean red, GLboolean green,
-      GLboolean blue, GLboolean alpha)
-{
+void rglColorMask(GLboolean red, GLboolean green, GLboolean blue,
+                  GLboolean alpha) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glColorMask.\n");
+  log_cb(RETRO_LOG_INFO, "glColorMask.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glColorMask(red, green, blue, alpha);
-   gl_state.colormask.red   = red;
-   gl_state.colormask.green = green;
-   gl_state.colormask.blue  = blue;
-   gl_state.colormask.alpha = alpha;
-   gl_state.colormask.used  = true;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glColorMask(red, green, blue, alpha);
+  gl_state.colormask.red = red;
+  gl_state.colormask.green = green;
+  gl_state.colormask.blue = blue;
+  gl_state.colormask.alpha = alpha;
+  gl_state.colormask.used = true;
 }
 
 /*
@@ -512,15 +457,14 @@ void rglColorMask(GLboolean red, GLboolean green,
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglCullFace(GLenum mode)
-{
+void rglCullFace(GLenum mode) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glCullFace.\n");
+  log_cb(RETRO_LOG_INFO, "glCullFace.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glCullFace(mode);
-   gl_state.cullface.used = true;
-   gl_state.cullface.mode = mode;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glCullFace(mode);
+  gl_state.cullface.used = true;
+  gl_state.cullface.mode = mode;
 }
 
 /*
@@ -528,16 +472,15 @@ void rglCullFace(GLenum mode)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass)
-{
+void rglStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glStencilOp.\n");
+  log_cb(RETRO_LOG_INFO, "glStencilOp.\n");
 #endif
-   glStencilOp(sfail, dpfail, dppass);
-   gl_state.stencilop.used   = true;
-   gl_state.stencilop.sfail  = sfail;
-   gl_state.stencilop.dpfail = dpfail;
-   gl_state.stencilop.dppass = dppass;
+  glStencilOp(sfail, dpfail, dppass);
+  gl_state.stencilop.used = true;
+  gl_state.stencilop.sfail = sfail;
+  gl_state.stencilop.dpfail = dpfail;
+  gl_state.stencilop.dppass = dppass;
 }
 
 /*
@@ -545,16 +488,15 @@ void rglStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass)
  * Core in:
  * OpenGLES  : 2.0
  */
-void rglStencilFunc(GLenum func, GLint ref, GLuint mask)
-{
+void rglStencilFunc(GLenum func, GLint ref, GLuint mask) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glStencilFunc.\n");
+  log_cb(RETRO_LOG_INFO, "glStencilFunc.\n");
 #endif
-   glStencilFunc(func, ref, mask);
-   gl_state.stencilfunc.used = true;
-   gl_state.stencilfunc.func = func;
-   gl_state.stencilfunc.ref  = ref;
-   gl_state.stencilfunc.mask = mask;
+  glStencilFunc(func, ref, mask);
+  gl_state.stencilfunc.used = true;
+  gl_state.stencilfunc.func = func;
+  gl_state.stencilfunc.ref = ref;
+  gl_state.stencilfunc.mask = mask;
 }
 
 /*
@@ -562,12 +504,11 @@ void rglStencilFunc(GLenum func, GLint ref, GLuint mask)
  * Core in:
  * OpenGL    : 1.0
  */
-GLboolean rglIsEnabled(GLenum cap)
-{
+GLboolean rglIsEnabled(GLenum cap) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glIsEnabled.\n");
+  log_cb(RETRO_LOG_INFO, "glIsEnabled.\n");
 #endif
-   return gl_state.cap_state[cap] ? GL_TRUE : GL_FALSE;
+  return gl_state.cap_state[cap] ? GL_TRUE : GL_FALSE;
 }
 
 /*
@@ -575,18 +516,17 @@ GLboolean rglIsEnabled(GLenum cap)
  * Core in:
  * OpenGL    : 1.0
  */
-void rglClearColor(GLclampf red, GLclampf green,
-      GLclampf blue, GLclampf alpha)
-{
+void rglClearColor(GLclampf red, GLclampf green, GLclampf blue,
+                   GLclampf alpha) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glClearColor.\n");
+  log_cb(RETRO_LOG_INFO, "glClearColor.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glClearColor(red, green, blue, alpha);
-   gl_state.clear_color.r = red;
-   gl_state.clear_color.g = green;
-   gl_state.clear_color.b = blue;
-   gl_state.clear_color.a = alpha;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glClearColor(red, green, blue, alpha);
+  gl_state.clear_color.r = red;
+  gl_state.clear_color.g = green;
+  gl_state.clear_color.b = blue;
+  gl_state.clear_color.a = alpha;
 }
 
 /*
@@ -594,18 +534,17 @@ void rglClearColor(GLclampf red, GLclampf green,
  * Core in:
  * OpenGLES    : 2.0 (maybe earlier?)
  */
-void rglScissor(GLint x, GLint y, GLsizei width, GLsizei height)
-{
+void rglScissor(GLint x, GLint y, GLsizei width, GLsizei height) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glScissor.\n");
+  log_cb(RETRO_LOG_INFO, "glScissor.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glScissor(x, y, width, height);
-   gl_state.scissor.used = true;
-   gl_state.scissor.x    = x;
-   gl_state.scissor.y    = y;
-   gl_state.scissor.w    = width;
-   gl_state.scissor.h    = height;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glScissor(x, y, width, height);
+  gl_state.scissor.used = true;
+  gl_state.scissor.x = x;
+  gl_state.scissor.y = y;
+  gl_state.scissor.w = width;
+  gl_state.scissor.h = height;
 }
 
 /*
@@ -613,29 +552,27 @@ void rglScissor(GLint x, GLint y, GLsizei width, GLsizei height)
  * Core in:
  * OpenGL    : 1.0
  */
-void rglViewport(GLint x, GLint y, GLsizei width, GLsizei height)
-{
+void rglViewport(GLint x, GLint y, GLsizei width, GLsizei height) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glViewport.\n");
+  log_cb(RETRO_LOG_INFO, "glViewport.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glViewport(x, y, width, height);
-   gl_state.viewport.x = x;
-   gl_state.viewport.y = y;
-   gl_state.viewport.w = width;
-   gl_state.viewport.h = height;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glViewport(x, y, width, height);
+  gl_state.viewport.x = x;
+  gl_state.viewport.y = y;
+  gl_state.viewport.w = width;
+  gl_state.viewport.h = height;
 }
 
-void rglBlendFunc(GLenum sfactor, GLenum dfactor)
-{
+void rglBlendFunc(GLenum sfactor, GLenum dfactor) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBlendFunc.\n");
+  log_cb(RETRO_LOG_INFO, "glBlendFunc.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   gl_state.blendfunc.used    = true;
-   gl_state.blendfunc.sfactor = sfactor;
-   gl_state.blendfunc.dfactor = dfactor;
-   glBlendFunc(sfactor, dfactor);
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  gl_state.blendfunc.used = true;
+  gl_state.blendfunc.sfactor = sfactor;
+  gl_state.blendfunc.dfactor = dfactor;
+  glBlendFunc(sfactor, dfactor);
 }
 
 /*
@@ -644,18 +581,17 @@ void rglBlendFunc(GLenum sfactor, GLenum dfactor)
  * Core in:
  * OpenGL    : 1.4
  */
-void rglBlendFuncSeparate(GLenum sfactor, GLenum dfactor)
-{
+void rglBlendFuncSeparate(GLenum sfactor, GLenum dfactor) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBlendFuncSeparate.\n");
+  log_cb(RETRO_LOG_INFO, "glBlendFuncSeparate.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   gl_state.blendfunc_separate.used     = true;
-   gl_state.blendfunc_separate.srcRGB   = sfactor;
-   gl_state.blendfunc_separate.dstRGB   = dfactor;
-   gl_state.blendfunc_separate.srcAlpha = sfactor;
-   gl_state.blendfunc_separate.dstAlpha = dfactor;
-   glBlendFunc(sfactor, dfactor);
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  gl_state.blendfunc_separate.used = true;
+  gl_state.blendfunc_separate.srcRGB = sfactor;
+  gl_state.blendfunc_separate.dstRGB = dfactor;
+  gl_state.blendfunc_separate.srcAlpha = sfactor;
+  gl_state.blendfunc_separate.dstAlpha = dfactor;
+  glBlendFunc(sfactor, dfactor);
 }
 
 /*
@@ -664,14 +600,13 @@ void rglBlendFuncSeparate(GLenum sfactor, GLenum dfactor)
  * Core in:
  * OpenGL    : 1.3
  */
-void rglActiveTexture(GLenum texture)
-{
+void rglActiveTexture(GLenum texture) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glActiveTexture.\n");
+  log_cb(RETRO_LOG_INFO, "glActiveTexture.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glActiveTexture(texture);
-   gl_state.active_texture = texture - GL_TEXTURE0;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glActiveTexture(texture);
+  gl_state.active_texture = texture - GL_TEXTURE0;
 }
 
 /*
@@ -679,14 +614,13 @@ void rglActiveTexture(GLenum texture)
  * Core in:
  * OpenGL    : 1.1
  */
-void rglBindTexture(GLenum target, GLuint texture)
-{
+void rglBindTexture(GLenum target, GLuint texture) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindTexture.\n");
+  log_cb(RETRO_LOG_INFO, "glBindTexture.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glBindTexture(target, texture);
-   gl_state.bind_textures.ids[gl_state.active_texture] = texture;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glBindTexture(target, texture);
+  gl_state.bind_textures.ids[gl_state.active_texture] = texture;
 }
 
 /*
@@ -694,14 +628,13 @@ void rglBindTexture(GLenum target, GLuint texture)
  * Core in:
  * OpenGL    : 1.0
  */
-void rglDisable(GLenum cap)
-{
+void rglDisable(GLenum cap) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDisable.\n");
+  log_cb(RETRO_LOG_INFO, "glDisable.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glDisable(gl_state.cap_translate[cap]);
-   gl_state.cap_state[cap] = 0;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glDisable(gl_state.cap_translate[cap]);
+  gl_state.cap_state[cap] = 0;
 }
 
 /*
@@ -709,14 +642,13 @@ void rglDisable(GLenum cap)
  * Core in:
  * OpenGL    : 1.0
  */
-void rglEnable(GLenum cap)
-{
+void rglEnable(GLenum cap) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glEnable.\n");
+  log_cb(RETRO_LOG_INFO, "glEnable.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glEnable(gl_state.cap_translate[cap]);
-   gl_state.cap_state[cap] = 1;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glEnable(gl_state.cap_translate[cap]);
+  gl_state.cap_state[cap] = 1;
 }
 
 /*
@@ -725,14 +657,13 @@ void rglEnable(GLenum cap)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUseProgram(GLuint program)
-{
+void rglUseProgram(GLuint program) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUseProgram.\n");
+  log_cb(RETRO_LOG_INFO, "glUseProgram.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   gl_state.program = program;
-   glUseProgram(program);
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  gl_state.program = program;
+  glUseProgram(program);
 }
 
 /*
@@ -740,15 +671,14 @@ void rglUseProgram(GLuint program)
  * Core in:
  * OpenGL    : 1.0
  */
-void rglDepthMask(GLboolean flag)
-{
+void rglDepthMask(GLboolean flag) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDepthMask.\n");
+  log_cb(RETRO_LOG_INFO, "glDepthMask.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glDepthMask(flag);
-   gl_state.depthmask.used = true;
-   gl_state.depthmask.mask = flag;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glDepthMask(flag);
+  gl_state.depthmask.used = true;
+  gl_state.depthmask.mask = flag;
 }
 
 /*
@@ -756,14 +686,13 @@ void rglDepthMask(GLboolean flag)
  * Core in:
  * OpenGL    : 1.0
  */
-void rglStencilMask(GLenum mask)
-{
+void rglStencilMask(GLenum mask) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glStencilMask.\n");
+  log_cb(RETRO_LOG_INFO, "glStencilMask.\n");
 #endif
-   glStencilMask(mask);
-   gl_state.stencilmask.used = true;
-   gl_state.stencilmask.mask = mask;
+  glStencilMask(mask);
+  gl_state.stencilmask.used = true;
+  gl_state.stencilmask.mask = mask;
 }
 
 /*
@@ -771,13 +700,12 @@ void rglStencilMask(GLenum mask)
  * Core in:
  * OpenGL    : 1.5
  */
-void rglBufferData(GLenum target, GLsizeiptr size,
-      const GLvoid *data, GLenum usage)
-{
+void rglBufferData(GLenum target, GLsizeiptr size, const GLvoid *data,
+                   GLenum usage) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBufferData.\n");
+  log_cb(RETRO_LOG_INFO, "glBufferData.\n");
 #endif
-   glBufferData(target, size, data, usage);
+  glBufferData(target, size, data, usage);
 }
 
 /*
@@ -785,13 +713,12 @@ void rglBufferData(GLenum target, GLsizeiptr size,
  * Core in:
  * OpenGL    : 1.5
  */
-void rglBufferSubData(GLenum target, GLintptr offset,
-      GLsizeiptr size, const GLvoid *data)
-{
+void rglBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size,
+                      const GLvoid *data) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBufferSubData.\n");
+  log_cb(RETRO_LOG_INFO, "glBufferSubData.\n");
 #endif
-   glBufferSubData(target, offset, size, data);
+  glBufferSubData(target, offset, size, data);
 }
 
 /*
@@ -799,15 +726,14 @@ void rglBufferSubData(GLenum target, GLintptr offset,
  * Core in:
  * OpenGL    : 1.5
  */
-void rglBindBuffer(GLenum target, GLuint buffer)
-{
+void rglBindBuffer(GLenum target, GLuint buffer) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindBuffer.\n");
+  log_cb(RETRO_LOG_INFO, "glBindBuffer.\n");
 #endif
-   if (target == GL_ARRAY_BUFFER)
-      gl_state.array_buffer = buffer;
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glBindBuffer(target, buffer);
+  if (target == GL_ARRAY_BUFFER)
+    gl_state.array_buffer = buffer;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glBindBuffer(target, buffer);
 }
 
 /*
@@ -816,12 +742,11 @@ void rglBindBuffer(GLenum target, GLuint buffer)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglLinkProgram(GLuint program)
-{
+void rglLinkProgram(GLuint program) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glLinkProgram.\n");
+  log_cb(RETRO_LOG_INFO, "glLinkProgram.\n");
 #endif
-   glLinkProgram(program);
+  glLinkProgram(program);
 }
 
 /*
@@ -831,13 +756,12 @@ void rglLinkProgram(GLuint program)
  * OpenGL    : 3.0
  * OpenGLES  : 2.0
  */
-void rglFramebufferTexture2D(GLenum target, GLenum attachment,
-      GLenum textarget, GLuint texture, GLint level)
-{
+void rglFramebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget,
+                             GLuint texture, GLint level) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glFramebufferTexture2D.\n");
+  log_cb(RETRO_LOG_INFO, "glFramebufferTexture2D.\n");
 #endif
-   glFramebufferTexture2D(target, attachment, textarget, texture, level);
+  glFramebufferTexture2D(target, attachment, textarget, texture, level);
 }
 
 /*
@@ -847,14 +771,13 @@ void rglFramebufferTexture2D(GLenum target, GLenum attachment,
  * OpenGL    : 3.0
  * OpenGLES  : 3.2
  */
-void rglFramebufferTexture(GLenum target, GLenum attachment,
-  	GLuint texture, GLint level)
-{
+void rglFramebufferTexture(GLenum target, GLenum attachment, GLuint texture,
+                           GLint level) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glFramebufferTexture.\n");
+  log_cb(RETRO_LOG_INFO, "glFramebufferTexture.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
-   glFramebufferTexture(target, attachment, texture, level);
+  glFramebufferTexture(target, attachment, texture, level);
 #endif
 }
 
@@ -863,12 +786,48 @@ void rglFramebufferTexture(GLenum target, GLenum attachment,
  * Core in:
  * OpenGL    : 1.1
  */
-void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
-{
+static GLuint glsm_client_vbos[MAX_ATTRIB] = {0};
+
+void rglDrawArrays(GLenum mode, GLint first, GLsizei count) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDrawArrays.\n");
+  log_cb(RETRO_LOG_INFO, "glDrawArrays.\n");
 #endif
-   glDrawArrays(mode, first, count);
+  unsigned i;
+  bool restored_array_buffer = false;
+  if (count > 0) {
+    for (i = 0; i < MAX_ATTRIB; i++) {
+      if (gl_state.attrib_pointer.used[i] &&
+          gl_state.attrib_pointer.buffer[i] == 0 &&
+          gl_state.attrib_pointer.pointer[i] != NULL) {
+        GLint size = gl_state.attrib_pointer.size[i];
+        GLenum type = gl_state.attrib_pointer.type[i];
+        GLboolean norm = gl_state.attrib_pointer.normalized[i];
+        GLsizei stride = gl_state.attrib_pointer.stride[i];
+        const void *ptr = gl_state.attrib_pointer.pointer[i];
+        size_t type_size = sizeof(float);
+        if (type == GL_INT || type == GL_UNSIGNED_INT)
+          type_size = sizeof(int);
+        else if (type == GL_SHORT || type == GL_UNSIGNED_SHORT)
+          type_size = sizeof(short);
+        else if (type == GL_BYTE || type == GL_UNSIGNED_BYTE)
+          type_size = 1;
+        size_t elem_size = size * type_size;
+        size_t eff_stride = stride > 0 ? (size_t)stride : elem_size;
+        size_t total_bytes = (size_t)(first + count) * eff_stride;
+
+        if (glsm_client_vbos[i] == 0)
+          glGenBuffers(1, &glsm_client_vbos[i]);
+        glBindBuffer(GL_ARRAY_BUFFER, glsm_client_vbos[i]);
+        glBufferData(GL_ARRAY_BUFFER, total_bytes, ptr, GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(i, size, type, norm, stride,
+                              (const GLvoid *)(uintptr_t)(first * eff_stride));
+        restored_array_buffer = true;
+      }
+    }
+  }
+  glDrawArrays(mode, first, count);
+  if (restored_array_buffer)
+    glBindBuffer(GL_ARRAY_BUFFER, gl_state.array_buffer);
 }
 
 /*
@@ -877,39 +836,35 @@ void rglDrawArrays(GLenum mode, GLint first, GLsizei count)
  * OpenGL    : 1.1
  */
 void rglDrawElements(GLenum mode, GLsizei count, GLenum type,
-                           const GLvoid * indices)
-{
+                     const GLvoid *indices) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDrawElements.\n");
+  log_cb(RETRO_LOG_INFO, "glDrawElements.\n");
 #endif
-   glDrawElements(mode, count, type, indices);
+  glDrawElements(mode, count, type, indices);
 }
 
-void rglCompressedTexImage2D(GLenum target, GLint level,
-      GLenum internalformat, GLsizei width, GLsizei height,
-      GLint border, GLsizei imageSize, const GLvoid *data)
-{
+void rglCompressedTexImage2D(GLenum target, GLint level, GLenum internalformat,
+                             GLsizei width, GLsizei height, GLint border,
+                             GLsizei imageSize, const GLvoid *data) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glCompressedTexImage2D.\n");
+  log_cb(RETRO_LOG_INFO, "glCompressedTexImage2D.\n");
 #endif
-   glCompressedTexImage2D(target, level, internalformat,
-         width, height, border, imageSize, data);
+  glCompressedTexImage2D(target, level, internalformat, width, height, border,
+                         imageSize, data);
 }
 
-void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
-{
+void rglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDeleteFramebuffers.\n");
+  log_cb(RETRO_LOG_INFO, "glDeleteFramebuffers.\n");
 #endif
-   glDeleteFramebuffers(n, framebuffers);
+  glDeleteFramebuffers(n, framebuffers);
 }
 
-void rglDeleteTextures(GLsizei n, const GLuint *textures)
-{
+void rglDeleteTextures(GLsizei n, const GLuint *textures) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDeleteTextures.\n");
+  log_cb(RETRO_LOG_INFO, "glDeleteTextures.\n");
 #endif
-   glDeleteTextures(n, textures);
+  glDeleteTextures(n, textures);
 }
 
 /*
@@ -917,13 +872,12 @@ void rglDeleteTextures(GLsizei n, const GLuint *textures)
  * Core in:
  * OpenGLES    : 2.0
  */
-void rglRenderbufferStorage(GLenum target, GLenum internalFormat,
-      GLsizei width, GLsizei height)
-{
+void rglRenderbufferStorage(GLenum target, GLenum internalFormat, GLsizei width,
+                            GLsizei height) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glRenderbufferStorage.\n");
+  log_cb(RETRO_LOG_INFO, "glRenderbufferStorage.\n");
 #endif
-   glRenderbufferStorage(target, internalFormat, width, height);
+  glRenderbufferStorage(target, internalFormat, width, height);
 }
 
 /*
@@ -933,12 +887,11 @@ void rglRenderbufferStorage(GLenum target, GLenum internalFormat,
  * OpenGL      : 3.0
  * OpenGLES    : 2.0
  */
-void rglBindRenderbuffer(GLenum target, GLuint renderbuffer)
-{
+void rglBindRenderbuffer(GLenum target, GLuint renderbuffer) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindRenderbuffer.\n");
+  log_cb(RETRO_LOG_INFO, "glBindRenderbuffer.\n");
 #endif
-   glBindRenderbuffer(target, renderbuffer);
+  glBindRenderbuffer(target, renderbuffer);
 }
 
 /*
@@ -947,27 +900,11 @@ void rglBindRenderbuffer(GLenum target, GLuint renderbuffer)
  *
  * OpenGLES    : 2.0
  */
-void rglDeleteRenderbuffers(GLsizei n, GLuint *renderbuffers)
-{
+void rglDeleteRenderbuffers(GLsizei n, GLuint *renderbuffers) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDeleteRenderbuffers.\n");
+  log_cb(RETRO_LOG_INFO, "glDeleteRenderbuffers.\n");
 #endif
-   glDeleteRenderbuffers(n, renderbuffers);
-}
-
-/*
- *
- * Core in:
- *
- * OpenGL      : 3.0
- * OpenGLES    : 2.0
- */
-void rglGenRenderbuffers(GLsizei n, GLuint *renderbuffers)
-{
-#ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGenRenderbuffers.\n");
-#endif
-   glGenRenderbuffers(n, renderbuffers);
+  glDeleteRenderbuffers(n, renderbuffers);
 }
 
 /*
@@ -977,12 +914,25 @@ void rglGenRenderbuffers(GLsizei n, GLuint *renderbuffers)
  * OpenGL      : 3.0
  * OpenGLES    : 2.0
  */
-void rglGenerateMipmap(GLenum target)
-{
+void rglGenRenderbuffers(GLsizei n, GLuint *renderbuffers) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGenerateMipmap.\n");
+  log_cb(RETRO_LOG_INFO, "glGenRenderbuffers.\n");
 #endif
-   glGenerateMipmap(target);
+  glGenRenderbuffers(n, renderbuffers);
+}
+
+/*
+ *
+ * Core in:
+ *
+ * OpenGL      : 3.0
+ * OpenGLES    : 2.0
+ */
+void rglGenerateMipmap(GLenum target) {
+#ifdef GLSM_DEBUG
+  log_cb(RETRO_LOG_INFO, "glGenerateMipmap.\n");
+#endif
+  glGenerateMipmap(target);
 }
 
 /*
@@ -991,12 +941,11 @@ void rglGenerateMipmap(GLenum target)
  * Core in:
  * OpenGL    : 3.0
  */
-GLenum rglCheckFramebufferStatus(GLenum target)
-{
+GLenum rglCheckFramebufferStatus(GLenum target) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glCheckFramebufferStatus.\n");
+  log_cb(RETRO_LOG_INFO, "glCheckFramebufferStatus.\n");
 #endif
-   return glCheckFramebufferStatus(target);
+  return glCheckFramebufferStatus(target);
 }
 
 /*
@@ -1007,12 +956,13 @@ GLenum rglCheckFramebufferStatus(GLenum target)
  * OpenGLES  : 2.0
  */
 void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
-      GLenum renderbuffertarget, GLuint renderbuffer)
-{
+                                GLenum renderbuffertarget,
+                                GLuint renderbuffer) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glFramebufferRenderbuffer.\n");
+  log_cb(RETRO_LOG_INFO, "glFramebufferRenderbuffer.\n");
 #endif
-   glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+  glFramebufferRenderbuffer(target, attachment, renderbuffertarget,
+                            renderbuffer);
 }
 
 /*
@@ -1022,13 +972,12 @@ void rglFramebufferRenderbuffer(GLenum target, GLenum attachment,
  * OpenGL    : 3.0
  */
 void rglBindFragDataLocation(GLuint program, GLuint colorNumber,
-                                   const char * name)
-{
+                             const char *name) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindFragDataLocation.\n");
+  log_cb(RETRO_LOG_INFO, "glBindFragDataLocation.\n");
 #endif
 #if !defined(HAVE_OPENGLES2)
-   glBindFragDataLocation(program, colorNumber, name);
+  glBindFragDataLocation(program, colorNumber, name);
 #endif
 }
 
@@ -1038,12 +987,11 @@ void rglBindFragDataLocation(GLuint program, GLuint colorNumber,
  * Core in:
  * OpenGL    : 2.0
  */
-void rglGetProgramiv(GLuint shader, GLenum pname, GLint *params)
-{
+void rglGetProgramiv(GLuint shader, GLenum pname, GLint *params) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetProgramiv.\n");
+  log_cb(RETRO_LOG_INFO, "glGetProgramiv.\n");
 #endif
-   glGetProgramiv(shader, pname, params);
+  glGetProgramiv(shader, pname, params);
 }
 
 /*
@@ -1053,17 +1001,16 @@ void rglGetProgramiv(GLuint shader, GLenum pname, GLint *params)
  * OpenGL    : 4.1
  * OpenGLES  : 3.0
  */
-void rglProgramParameteri( 	GLuint program,
-  	GLenum pname,
-  	GLint value)
-{
+void rglProgramParameteri(GLuint program, GLenum pname, GLint value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glProgramParameteri.\n");
+  log_cb(RETRO_LOG_INFO, "glProgramParameteri.\n");
 #endif
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES) && (defined(HAVE_OPENGLES3) || defined(HAVE_OPENGLES_3_1))
-   glProgramParameteri(program, pname, value);
+#if !defined(HAVE_OPENGLES) ||                                                 \
+    defined(HAVE_OPENGLES) &&                                                  \
+        (defined(HAVE_OPENGLES3) || defined(HAVE_OPENGLES_3_1))
+  glProgramParameteri(program, pname, value);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -1073,66 +1020,56 @@ void rglProgramParameteri( 	GLuint program,
  * OpenGL    : 2.0
  */
 void rglGetActiveUniform(GLuint program, GLuint index, GLsizei bufsize,
-      GLsizei *length, GLint *size, GLenum *type, GLchar *name)
-{
+                         GLsizei *length, GLint *size, GLenum *type,
+                         GLchar *name) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetActiveUniform.\n");
+  log_cb(RETRO_LOG_INFO, "glGetActiveUniform.\n");
 #endif
-   glGetActiveUniform(program, index, bufsize, length, size, type, name);
+  glGetActiveUniform(program, index, bufsize, length, size, type, name);
 }
 
-void rglGenQueries(	GLsizei n,
- 	GLuint * ids)
-{
+void rglGenQueries(GLsizei n, GLuint *ids) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGenQueries.\n");
+  log_cb(RETRO_LOG_INFO, "glGenQueries.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGenQueries(n, ids);
-#endif
-}
-
-void rglGetQueryObjectuiv(	GLuint id,
- 	GLenum pname,
- 	GLuint * params)
-{
-#ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetQueryObjectuiv.\n");
-#endif
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGetQueryObjectuiv(id, pname, params);
+  glGenQueries(n, ids);
 #endif
 }
 
-void rglDeleteQueries(	GLsizei n,
- 	const GLuint * ids)
-{
+void rglGetQueryObjectuiv(GLuint id, GLenum pname, GLuint *params) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDeleteQueries.\n");
+  log_cb(RETRO_LOG_INFO, "glGetQueryObjectuiv.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glDeleteQueries(n, ids);
+  glGetQueryObjectuiv(id, pname, params);
 #endif
 }
 
-void rglBeginQuery(	GLenum target,
- 	GLuint id)
-{
+void rglDeleteQueries(GLsizei n, const GLuint *ids) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBeginQuery.\n");
+  log_cb(RETRO_LOG_INFO, "glDeleteQueries.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glBeginQuery(target, id);
+  glDeleteQueries(n, ids);
 #endif
 }
 
-void rglEndQuery(	GLenum target)
-{
+void rglBeginQuery(GLenum target, GLuint id) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glEndQuery.\n");
+  log_cb(RETRO_LOG_INFO, "glBeginQuery.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glEndQuery(target);
+  glBeginQuery(target, id);
+#endif
+}
+
+void rglEndQuery(GLenum target) {
+#ifdef GLSM_DEBUG
+  log_cb(RETRO_LOG_INFO, "glEndQuery.\n");
+#endif
+#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
+  glEndQuery(target);
 #endif
 }
 
@@ -1144,19 +1081,15 @@ void rglEndQuery(	GLenum target)
  * OpenGL    : 2.0
  * OpenGLES  : 3.0
  */
-void rglGetActiveUniformBlockiv(GLuint program,
-  	GLuint uniformBlockIndex,
-  	GLenum pname,
-  	GLint *params)
-{
+void rglGetActiveUniformBlockiv(GLuint program, GLuint uniformBlockIndex,
+                                GLenum pname, GLint *params) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetActiveUniformBlockiv.\n");
+  log_cb(RETRO_LOG_INFO, "glGetActiveUniformBlockiv.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGetActiveUniformBlockiv(program, uniformBlockIndex,
-         pname, params);
+  glGetActiveUniformBlockiv(program, uniformBlockIndex, pname, params);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -1166,20 +1099,16 @@ void rglGetActiveUniformBlockiv(GLuint program,
  *
  * OpenGLES  : 3.0
  */
-void rglGetActiveUniformsiv( 	GLuint program,
-  	GLsizei uniformCount,
-  	const GLuint *uniformIndices,
-  	GLenum pname,
-  	GLint *params)
-{
+void rglGetActiveUniformsiv(GLuint program, GLsizei uniformCount,
+                            const GLuint *uniformIndices, GLenum pname,
+                            GLint *params) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetActiveUniformsiv.\n");
+  log_cb(RETRO_LOG_INFO, "glGetActiveUniformsiv.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGetActiveUniformsiv(program, uniformCount,
-         uniformIndices, pname, params);
+  glGetActiveUniformsiv(program, uniformCount, uniformIndices, pname, params);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -1189,19 +1118,15 @@ void rglGetActiveUniformsiv( 	GLuint program,
  *
  * OpenGLES  : 3.0
  */
-void rglGetUniformIndices(GLuint program,
-  	GLsizei uniformCount,
-  	const GLchar **uniformNames,
-  	GLuint *uniformIndices)
-{
+void rglGetUniformIndices(GLuint program, GLsizei uniformCount,
+                          const GLchar **uniformNames, GLuint *uniformIndices) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetUniformIndices.\n");
+  log_cb(RETRO_LOG_INFO, "glGetUniformIndices.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGetUniformIndices(program, uniformCount,
-         uniformNames, uniformIndices);
+  glGetUniformIndices(program, uniformCount, uniformNames, uniformIndices);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -1212,17 +1137,14 @@ void rglGetUniformIndices(GLuint program,
  *
  * OpenGLES  : 3.0
  */
-void rglBindBufferBase( 	GLenum target,
-  	GLuint index,
-  	GLuint buffer)
-{
+void rglBindBufferBase(GLenum target, GLuint index, GLuint buffer) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindBufferBase.\n");
+  log_cb(RETRO_LOG_INFO, "glBindBufferBase.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glBindBufferBase(target, index, buffer);
+  glBindBufferBase(target, index, buffer);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -1234,17 +1156,15 @@ void rglBindBufferBase( 	GLenum target,
  *
  * OpenGLES  : 3.0
  */
-GLuint rglGetUniformBlockIndex( 	GLuint program,
-  	const GLchar *uniformBlockName)
-{
+GLuint rglGetUniformBlockIndex(GLuint program, const GLchar *uniformBlockName) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetUniformBlockIndex.\n");
+  log_cb(RETRO_LOG_INFO, "glGetUniformBlockIndex.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   return glGetUniformBlockIndex(program, uniformBlockName);
+  return glGetUniformBlockIndex(program, uniformBlockName);
 #else
-   printf("WARNING! Not implemented.\n");
-   return 0;
+  printf("WARNING! Not implemented.\n");
+  return 0;
 #endif
 }
 
@@ -1255,18 +1175,15 @@ GLuint rglGetUniformBlockIndex( 	GLuint program,
  *
  * OpenGLES  : 3.0
  */
-void rglUniformBlockBinding( 	GLuint program,
-  	GLuint uniformBlockIndex,
-  	GLuint uniformBlockBinding)
-{
+void rglUniformBlockBinding(GLuint program, GLuint uniformBlockIndex,
+                            GLuint uniformBlockBinding) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniformBlockBinding.\n");
+  log_cb(RETRO_LOG_INFO, "glUniformBlockBinding.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glUniformBlockBinding(program, uniformBlockIndex,
-         uniformBlockBinding);
+  glUniformBlockBinding(program, uniformBlockIndex, uniformBlockBinding);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -1276,13 +1193,12 @@ void rglUniformBlockBinding( 	GLuint program,
  * OpenGL    : 2.0
  * OpenGLES  : 3.0
  */
-void rglUniform1ui(GLint location, GLuint v)
-{
+void rglUniform1ui(GLint location, GLuint v) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform1ui.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform1ui.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glUniform1ui(location ,v);
+  glUniform1ui(location, v);
 #endif
 }
 
@@ -1292,13 +1208,12 @@ void rglUniform1ui(GLint location, GLuint v)
  * OpenGL    : 2.0
  * OpenGLES  : 3.0
  */
-void rglUniform2ui(GLint location, GLuint v0, GLuint v1)
-{
+void rglUniform2ui(GLint location, GLuint v0, GLuint v1) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform2ui.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform2ui.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glUniform2ui(location, v0, v1);
+  glUniform2ui(location, v0, v1);
 #endif
 }
 
@@ -1308,13 +1223,12 @@ void rglUniform2ui(GLint location, GLuint v0, GLuint v1)
  * OpenGL    : 2.0
  * OpenGLES  : 3.0
  */
-void rglUniform3ui(GLint location, GLuint v0, GLuint v1, GLuint v2)
-{
+void rglUniform3ui(GLint location, GLuint v0, GLuint v1, GLuint v2) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform3ui.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform3ui.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glUniform3ui(location, v0, v1, v2);
+  glUniform3ui(location, v0, v1, v2);
 #endif
 }
 
@@ -1324,13 +1238,12 @@ void rglUniform3ui(GLint location, GLuint v0, GLuint v1, GLuint v2)
  * OpenGL    : 2.0
  * OpenGLES  : 3.0
  */
-void rglUniform4ui(GLint location, GLuint v0, GLuint v1, GLuint v2, GLuint v3)
-{
+void rglUniform4ui(GLint location, GLuint v0, GLuint v1, GLuint v2, GLuint v3) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform4ui.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform4ui.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glUniform4ui(location, v0, v1, v2, v3);
+  glUniform4ui(location, v0, v1, v2, v3);
 #endif
 }
 
@@ -1340,12 +1253,11 @@ void rglUniform4ui(GLint location, GLuint v0, GLuint v1, GLuint v2, GLuint v3)
  * OpenGL    : 2.0
  */
 void rglUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose,
-      const GLfloat *value)
-{
+                         const GLfloat *value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniformMatrix4fv.\n");
+  log_cb(RETRO_LOG_INFO, "glUniformMatrix4fv.\n");
 #endif
-   glUniformMatrix4fv(location, count, transpose, value);
+  glUniformMatrix4fv(location, count, transpose, value);
 }
 
 /*
@@ -1354,12 +1266,11 @@ void rglUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose,
  * Core in:
  * OpenGL    : 2.0
  */
-void rglDetachShader(GLuint program, GLuint shader)
-{
+void rglDetachShader(GLuint program, GLuint shader) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDetachShader.\n");
+  log_cb(RETRO_LOG_INFO, "glDetachShader.\n");
 #endif
-   glDetachShader(program, shader);
+  glDetachShader(program, shader);
 }
 
 /*
@@ -1368,12 +1279,11 @@ void rglDetachShader(GLuint program, GLuint shader)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglGetShaderiv(GLuint shader, GLenum pname, GLint *params)
-{
+void rglGetShaderiv(GLuint shader, GLenum pname, GLint *params) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetShaderiv.\n");
+  log_cb(RETRO_LOG_INFO, "glGetShaderiv.\n");
 #endif
-   glGetShaderiv(shader, pname, params);
+  glGetShaderiv(shader, pname, params);
 }
 
 /*
@@ -1382,12 +1292,11 @@ void rglGetShaderiv(GLuint shader, GLenum pname, GLint *params)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglAttachShader(GLuint program, GLuint shader)
-{
+void rglAttachShader(GLuint program, GLuint shader) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glAttachShader.\n");
+  log_cb(RETRO_LOG_INFO, "glAttachShader.\n");
 #endif
-   glAttachShader(program, shader);
+  glAttachShader(program, shader);
 }
 
 /*
@@ -1395,27 +1304,11 @@ void rglAttachShader(GLuint program, GLuint shader)
  * Core in:
  * OpenGL    : 2.0
  */
-GLint rglGetAttribLocation(GLuint program, const GLchar *name)
-{
+GLint rglGetAttribLocation(GLuint program, const GLchar *name) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetAttribLocation.\n");
+  log_cb(RETRO_LOG_INFO, "glGetAttribLocation.\n");
 #endif
-   return glGetAttribLocation(program, name);
-}
-
-/*
- * Category: Shaders
- *
- * Core in:
- * OpenGL    : 2.0
- */
-void rglShaderSource(GLuint shader, GLsizei count,
-      const GLchar **string, const GLint *length)
-{
-#ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glShaderSource.\n");
-#endif
-   return glShaderSource(shader, count, string, length);
+  return glGetAttribLocation(program, name);
 }
 
 /*
@@ -1424,12 +1317,133 @@ void rglShaderSource(GLuint shader, GLsizei count,
  * Core in:
  * OpenGL    : 2.0
  */
-void rglCompileShader(GLuint shader)
-{
+void rglShaderSource(GLuint shader, GLsizei count, const GLchar **string,
+                     const GLint *length) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glCompileShader.\n");
+  log_cb(RETRO_LOG_INFO, "glShaderSource.\n");
 #endif
-   glCompileShader(shader);
+#if defined(__APPLE__) || defined(ARCH_IS_MACOSX)
+  /* macOS OpenGL supports GLSL up to 4.10 but not 4.30.
+   *
+   * Pass 1: rewrite #version 430 / #version 400 → #version 330.
+   *
+   * Pass 2: strip "layout(binding = N)" from uniform sampler and UBO
+   *         declarations.  layout(binding=N) on samplers requires GLSL 4.20
+   *         (GL_ARB_shading_language_420pack) which Apple does not expose.
+   *         The core sets sampler units via glUniform1i() anyway, so the
+   *         qualifier is redundant and its removal is safe.
+   */
+  const GLchar **new_strings =
+      (const GLchar **)malloc(sizeof(GLchar *) * count);
+  char **allocated = (char **)calloc(count, sizeof(char *));
+  for (GLsizei i = 0; i < count; i++) {
+    if (string[i]) {
+      const char *v430 = strstr(string[i], "#version 430");
+      const char *v400 = strstr(string[i], "#version 400");
+      int needs_rewrite = (v430 || v400);
+
+      /* Always scan for layout(binding=N) uniform — those are illegal in 330
+       * regardless of whether the version line was already 330. */
+      const char *has_binding = strstr(string[i], "layout(binding");
+      if (!has_binding)
+        has_binding = strstr(string[i], "layout (binding");
+      if (!has_binding)
+        has_binding = strstr(string[i], "layout( binding");
+
+      if (needs_rewrite || has_binding) {
+        char *dup = strdup(string[i]);
+
+        /* Pass 1 – version rewrite */
+        if (needs_rewrite) {
+          char *target = strstr(dup, "#version 430");
+          if (!target)
+            target = strstr(dup, "#version 400");
+          if (target) {
+            target[9] = '3';
+            target[10] = '3';
+            target[11] = '0';
+          }
+        }
+
+        /* Pass 2 – strip layout(binding=N) from "uniform" declarations.
+         *
+         * We walk the string looking for "layout" followed (on the same line)
+         * by "binding" and "uniform".  When found we overwrite the entire
+         * "layout(...)" prefix with spaces so the rest of the declaration
+         * remains valid.
+         */
+        if (has_binding) {
+          char *p = dup;
+          while (*p) {
+            /* Find next occurrence of "layout" */
+            char *lay = strstr(p, "layout");
+            if (!lay)
+              break;
+
+            /* Find the end of this line */
+            char *eol = strchr(lay, '\n');
+            size_t line_len =
+                eol ? (size_t)(eol - lay) : strlen(lay);
+
+            /* Check that "binding" and "uniform" both appear on this line */
+            int has_bind = 0, has_uni = 0;
+            for (size_t k = 0; k < line_len; k++) {
+              if (!has_bind && strncmp(lay + k, "binding", 7) == 0)
+                has_bind = 1;
+              if (!has_uni && strncmp(lay + k, "uniform", 7) == 0)
+                has_uni = 1;
+            }
+
+            if (has_bind && has_uni) {
+              /* Find the closing ')' of the layout(...) qualifier */
+              char *close_paren = strchr(lay, ')');
+              if (close_paren && close_paren < lay + line_len) {
+                /* Overwrite "layout(…)" with spaces */
+                size_t erase_len = (size_t)(close_paren - lay) + 1;
+                memset(lay, ' ', erase_len);
+                p = lay + erase_len;
+                continue;
+              }
+            }
+
+            p = lay + 6; /* skip past "layout" and continue */
+          }
+        }
+
+        new_strings[i] = dup;
+        allocated[i] = dup;
+      } else {
+        new_strings[i] = string[i];
+      }
+    } else {
+      new_strings[i] = NULL;
+    }
+  }
+  glShaderSource(shader, count, new_strings, length);
+  for (GLsizei i = 0; i < count; i++) {
+    if (allocated[i])
+      free(allocated[i]);
+  }
+  free(allocated);
+  free(new_strings);
+  return;
+#else
+  return glShaderSource(shader, count, string, length);
+#endif
+}
+
+
+/*
+ * Category: Shaders
+ *
+ * Core in:
+ * OpenGL    : 2.0
+ */
+void rglCompileShader(GLuint shader) {
+#ifdef GLSM_DEBUG
+  log_cb(RETRO_LOG_INFO, "glCompileShader.\n");
+#endif
+  glCompileShader(shader);
 }
 
 /*
@@ -1438,12 +1452,11 @@ void rglCompileShader(GLuint shader)
  * Core in:
  * OpenGL    : 2.0
  */
-GLuint rglCreateProgram(void)
-{
+GLuint rglCreateProgram(void) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glCreateProgram.\n");
+  log_cb(RETRO_LOG_INFO, "glCreateProgram.\n");
 #endif
-   return glCreateProgram();
+  return glCreateProgram();
 }
 
 /*
@@ -1451,12 +1464,11 @@ GLuint rglCreateProgram(void)
  * Core in:
  * OpenGL    : 1.1
  */
-void rglGenTextures(GLsizei n, GLuint *textures)
-{
+void rglGenTextures(GLsizei n, GLuint *textures) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGenTextures.\n");
+  log_cb(RETRO_LOG_INFO, "glGenTextures.\n");
 #endif
-   glGenTextures(n, textures);
+  glGenTextures(n, textures);
 }
 
 /*
@@ -1464,13 +1476,12 @@ void rglGenTextures(GLsizei n, GLuint *textures)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglGetShaderInfoLog(GLuint shader, GLsizei maxLength,
-      GLsizei *length, GLchar *infoLog)
-{
+void rglGetShaderInfoLog(GLuint shader, GLsizei maxLength, GLsizei *length,
+                         GLchar *infoLog) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetShaderInfoLog.\n");
+  log_cb(RETRO_LOG_INFO, "glGetShaderInfoLog.\n");
 #endif
-   glGetShaderInfoLog(shader, maxLength, length, infoLog);
+  glGetShaderInfoLog(shader, maxLength, length, infoLog);
 }
 
 /*
@@ -1478,13 +1489,12 @@ void rglGetShaderInfoLog(GLuint shader, GLsizei maxLength,
  * Core in:
  * OpenGL    : 2.0
  */
-void rglGetProgramInfoLog(GLuint shader, GLsizei maxLength,
-      GLsizei *length, GLchar *infoLog)
-{
+void rglGetProgramInfoLog(GLuint shader, GLsizei maxLength, GLsizei *length,
+                          GLchar *infoLog) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetProgramInfoLog.\n");
+  log_cb(RETRO_LOG_INFO, "glGetProgramInfoLog.\n");
 #endif
-   glGetProgramInfoLog(shader, maxLength, length, infoLog);
+  glGetProgramInfoLog(shader, maxLength, length, infoLog);
 }
 
 /*
@@ -1492,21 +1502,19 @@ void rglGetProgramInfoLog(GLuint shader, GLsizei maxLength,
  * Core in:
  * OpenGL    : 2.0
  */
-GLboolean rglIsProgram(GLuint program)
-{
+GLboolean rglIsProgram(GLuint program) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glIsProgram.\n");
+  log_cb(RETRO_LOG_INFO, "glIsProgram.\n");
 #endif
-   return glIsProgram(program);
+  return glIsProgram(program);
 }
 
-void rglTexCoord2f(GLfloat s, GLfloat t)
-{
+void rglTexCoord2f(GLfloat s, GLfloat t) {
 #ifdef HAVE_LEGACY_GL
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glTexCoord2f.\n");
+  log_cb(RETRO_LOG_INFO, "glTexCoord2f.\n");
 #endif
-   glTexCoord2f(s, t);
+  glTexCoord2f(s, t);
 #endif
 }
 
@@ -1517,13 +1525,12 @@ void rglTexCoord2f(GLfloat s, GLfloat t)
  * OpenGL    : 2.0
  *
  */
-void rglDisableVertexAttribArray(GLuint index)
-{
+void rglDisableVertexAttribArray(GLuint index) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDisableVertexAttribArray.\n");
+  log_cb(RETRO_LOG_INFO, "glDisableVertexAttribArray.\n");
 #endif
-   gl_state.vertex_attrib_pointer.enabled[index] = 0;
-   glDisableVertexAttribArray(index);
+  gl_state.vertex_attrib_pointer.enabled[index] = 0;
+  glDisableVertexAttribArray(index);
 }
 
 /*
@@ -1532,14 +1539,13 @@ void rglDisableVertexAttribArray(GLuint index)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglEnableVertexAttribArray(GLuint index)
-{
+void rglEnableVertexAttribArray(GLuint index) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glEnableVertexAttribArray.\n");
+  log_cb(RETRO_LOG_INFO, "glEnableVertexAttribArray.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   gl_state.vertex_attrib_pointer.enabled[index] = 1;
-   glEnableVertexAttribArray(index);
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  gl_state.vertex_attrib_pointer.enabled[index] = 1;
+  glEnableVertexAttribArray(index);
 }
 
 /*
@@ -1548,33 +1554,23 @@ void rglEnableVertexAttribArray(GLuint index)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglVertexAttribIPointer(
-      GLuint index,
-      GLint size,
-      GLenum type,
-      GLsizei stride,
-      const GLvoid * pointer)
-{
+void rglVertexAttribIPointer(GLuint index, GLint size, GLenum type,
+                             GLsizei stride, const GLvoid *pointer) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glVertexAttribIPointer.\n");
+  log_cb(RETRO_LOG_INFO, "glVertexAttribIPointer.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glVertexAttribIPointer(index, size, type, stride, pointer);
+  glVertexAttribIPointer(index, size, type, stride, pointer);
 #endif
 }
 
-void rglVertexAttribLPointer(
-      GLuint index,
-      GLint size,
-      GLenum type,
-      GLsizei stride,
-      const GLvoid * pointer)
-{
+void rglVertexAttribLPointer(GLuint index, GLint size, GLenum type,
+                             GLsizei stride, const GLvoid *pointer) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glVertexAttribLPointer.\n");
+  log_cb(RETRO_LOG_INFO, "glVertexAttribLPointer.\n");
 #endif
 #if defined(HAVE_OPENGL)
-   glVertexAttribLPointer(index, size, type, stride, pointer);
+  glVertexAttribLPointer(index, size, type, stride, pointer);
 #endif
 }
 
@@ -1584,21 +1580,23 @@ void rglVertexAttribLPointer(
  * Core in:
  * OpenGL    : 2.0
  */
-void rglVertexAttribPointer(GLuint name, GLint size,
-      GLenum type, GLboolean normalized, GLsizei stride,
-      const GLvoid* pointer)
-{
+void rglVertexAttribPointer(GLuint name, GLint size, GLenum type,
+                            GLboolean normalized, GLsizei stride,
+                            const GLvoid *pointer) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glVertexAttribPointer.\n");
+  log_cb(RETRO_LOG_INFO, "glVertexAttribPointer.\n");
 #endif
-   gl_state.attrib_pointer.used[name] = 1;
-   gl_state.attrib_pointer.size[name] = size;
-   gl_state.attrib_pointer.type[name] = type;
-   gl_state.attrib_pointer.normalized[name] = normalized;
-   gl_state.attrib_pointer.stride[name] = stride;
-   gl_state.attrib_pointer.pointer[name] = pointer;
-   gl_state.attrib_pointer.buffer[name] = gl_state.array_buffer;
-   glVertexAttribPointer(name, size, type, normalized, stride, pointer);
+  if (name >= MAX_ATTRIB)
+    return;
+  gl_state.attrib_pointer.used[name] = 1;
+  gl_state.attrib_pointer.size[name] = size;
+  gl_state.attrib_pointer.type[name] = type;
+  gl_state.attrib_pointer.normalized[name] = normalized;
+  gl_state.attrib_pointer.stride[name] = stride;
+  gl_state.attrib_pointer.pointer[name] = pointer;
+  gl_state.attrib_pointer.buffer[name] = gl_state.array_buffer;
+  if (gl_state.array_buffer != 0 || pointer == NULL)
+    glVertexAttribPointer(name, size, type, normalized, stride, pointer);
 }
 
 /*
@@ -1607,12 +1605,11 @@ void rglVertexAttribPointer(GLuint name, GLint size,
  * Core in:
  * OpenGL    : 2.0
  */
-void rglBindAttribLocation(GLuint program, GLuint index, const GLchar *name)
-{
+void rglBindAttribLocation(GLuint program, GLuint index, const GLchar *name) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindAttribLocation.\n");
+  log_cb(RETRO_LOG_INFO, "glBindAttribLocation.\n");
 #endif
-   glBindAttribLocation(program, index, name);
+  glBindAttribLocation(program, index, name);
 }
 
 /*
@@ -1620,13 +1617,12 @@ void rglBindAttribLocation(GLuint program, GLuint index, const GLchar *name)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
-      GLfloat z, GLfloat w)
-{
+void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y, GLfloat z,
+                       GLfloat w) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glVertexAttrib4f.\n");
+  log_cb(RETRO_LOG_INFO, "glVertexAttrib4f.\n");
 #endif
-   glVertexAttrib4f(name, x, y, z, w);
+  glVertexAttrib4f(name, x, y, z, w);
 }
 
 /*
@@ -1634,26 +1630,11 @@ void rglVertexAttrib4f(GLuint name, GLfloat x, GLfloat y,
  * Core in:
  * OpenGL    : 2.0
  */
-void rglVertexAttrib4fv(GLuint name, GLfloat* v)
-{
+void rglVertexAttrib4fv(GLuint name, GLfloat *v) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glVertexAttrib4fv.\n");
+  log_cb(RETRO_LOG_INFO, "glVertexAttrib4fv.\n");
 #endif
-   glVertexAttrib4fv(name, v);
-}
-
-/*
- * Category: Shaders
- *
- * Core in:
- * OpenGL    : 2.0
- */
-GLuint rglCreateShader(GLenum shaderType)
-{
-#ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glCreateShader.\n");
-#endif
-   return glCreateShader(shaderType);
+  glVertexAttrib4fv(name, v);
 }
 
 /*
@@ -1662,12 +1643,11 @@ GLuint rglCreateShader(GLenum shaderType)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglDeleteProgram(GLuint program)
-{
+GLuint rglCreateShader(GLenum shaderType) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDeleteProgram.\n");
+  log_cb(RETRO_LOG_INFO, "glCreateShader.\n");
 #endif
-   glDeleteProgram(program);
+  return glCreateShader(shaderType);
 }
 
 /*
@@ -1676,12 +1656,11 @@ void rglDeleteProgram(GLuint program)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglDeleteShader(GLuint shader)
-{
+void rglDeleteProgram(GLuint program) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDeleteShader.\n");
+  log_cb(RETRO_LOG_INFO, "glDeleteProgram.\n");
 #endif
-   glDeleteShader(shader);
+  glDeleteProgram(program);
 }
 
 /*
@@ -1690,12 +1669,24 @@ void rglDeleteShader(GLuint shader)
  * Core in:
  * OpenGL    : 2.0
  */
-GLint rglGetUniformLocation(GLuint program, const GLchar *name)
-{
+void rglDeleteShader(GLuint shader) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetUniformLocation.\n");
+  log_cb(RETRO_LOG_INFO, "glDeleteShader.\n");
 #endif
-   return glGetUniformLocation(program, name);
+  glDeleteShader(shader);
+}
+
+/*
+ * Category: Shaders
+ *
+ * Core in:
+ * OpenGL    : 2.0
+ */
+GLint rglGetUniformLocation(GLuint program, const GLchar *name) {
+#ifdef GLSM_DEBUG
+  log_cb(RETRO_LOG_INFO, "glGetUniformLocation.\n");
+#endif
+  return glGetUniformLocation(program, name);
 }
 
 /*
@@ -1704,12 +1695,11 @@ GLint rglGetUniformLocation(GLuint program, const GLchar *name)
  * Core in:
  * OpenGL    : 1.5
  */
-void rglDeleteBuffers(GLsizei n, const GLuint *buffers)
-{
+void rglDeleteBuffers(GLsizei n, const GLuint *buffers) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDeleteBuffers.\n");
+  log_cb(RETRO_LOG_INFO, "glDeleteBuffers.\n");
 #endif
-   glDeleteBuffers(n, buffers);
+  glDeleteBuffers(n, buffers);
 }
 
 /*
@@ -1718,12 +1708,11 @@ void rglDeleteBuffers(GLsizei n, const GLuint *buffers)
  * Core in:
  * OpenGL    : 1.5
  */
-void rglGenBuffers(GLsizei n, GLuint *buffers)
-{
+void rglGenBuffers(GLsizei n, GLuint *buffers) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGenBuffers.\n");
+  log_cb(RETRO_LOG_INFO, "glGenBuffers.\n");
 #endif
-   glGenBuffers(n, buffers);
+  glGenBuffers(n, buffers);
 }
 
 /*
@@ -1732,12 +1721,11 @@ void rglGenBuffers(GLsizei n, GLuint *buffers)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform1f(GLint location, GLfloat v0)
-{
+void rglUniform1f(GLint location, GLfloat v0) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform1f.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform1f.\n");
 #endif
-   glUniform1f(location, v0);
+  glUniform1f(location, v0);
 }
 
 /*
@@ -1746,12 +1734,11 @@ void rglUniform1f(GLint location, GLfloat v0)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform1fv(GLint location,  GLsizei count,  const GLfloat *value)
-{
+void rglUniform1fv(GLint location, GLsizei count, const GLfloat *value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform1fv.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform1fv.\n");
 #endif
-   glUniform1fv(location, count, value);
+  glUniform1fv(location, count, value);
 }
 
 /*
@@ -1760,33 +1747,28 @@ void rglUniform1fv(GLint location,  GLsizei count,  const GLfloat *value)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform1iv(GLint location,  GLsizei count,  const GLint *value)
-{
+void rglUniform1iv(GLint location, GLsizei count, const GLint *value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform1iv.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform1iv.\n");
 #endif
-   glUniform1iv(location, count, value);
+  glUniform1iv(location, count, value);
 }
 
-void rglClearBufferfv( 	GLenum buffer,
-  	GLint drawBuffer,
-  	const GLfloat * value)
-{
+void rglClearBufferfv(GLenum buffer, GLint drawBuffer, const GLfloat *value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glClearBufferfv.\n");
+  log_cb(RETRO_LOG_INFO, "glClearBufferfv.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
-   glClearBufferfv(buffer, drawBuffer, value);
+  glClearBufferfv(buffer, drawBuffer, value);
 #endif
 }
 
-void rglTexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
-{
+void rglTexBuffer(GLenum target, GLenum internalFormat, GLuint buffer) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glTexBuffer.\n");
+  log_cb(RETRO_LOG_INFO, "glTexBuffer.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
-   glTexBuffer(target, internalFormat, buffer);
+  glTexBuffer(target, internalFormat, buffer);
 #endif
 }
 
@@ -1796,28 +1778,24 @@ void rglTexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
  * OpenGL    : 2.0
  * OpenGLES  : 3.0
  */
-const GLubyte* rglGetStringi(GLenum name, GLuint index)
-{
+const GLubyte *rglGetStringi(GLenum name, GLuint index) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetString.\n");
+  log_cb(RETRO_LOG_INFO, "glGetString.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
-   return glGetStringi(name, index);
+  return glGetStringi(name, index);
 #else
-   return NULL;
+  return NULL;
 #endif
 }
 
-void rglClearBufferfi( 	GLenum buffer,
-  	GLint drawBuffer,
-  	GLfloat depth,
-  	GLint stencil)
-{
+void rglClearBufferfi(GLenum buffer, GLint drawBuffer, GLfloat depth,
+                      GLint stencil) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glClearBufferfi.\n");
+  log_cb(RETRO_LOG_INFO, "glClearBufferfi.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
-   glClearBufferfi(buffer, drawBuffer, depth, stencil);
+  glClearBufferfi(buffer, drawBuffer, depth, stencil);
 #endif
 }
 
@@ -1827,17 +1805,15 @@ void rglClearBufferfi( 	GLenum buffer,
  * OpenGL    : 3.0
  * OpenGLES  : 3.0
  */
-void rglRenderbufferStorageMultisample( 	GLenum target,
-  	GLsizei samples,
-  	GLenum internalformat,
-  	GLsizei width,
-  	GLsizei height)
-{
+void rglRenderbufferStorageMultisample(GLenum target, GLsizei samples,
+                                       GLenum internalformat, GLsizei width,
+                                       GLsizei height) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glRenderbufferStorageMultisample.\n");
+  log_cb(RETRO_LOG_INFO, "glRenderbufferStorageMultisample.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3)
-   glRenderbufferStorageMultisample(target, samples, internalformat, width, height);
+  glRenderbufferStorageMultisample(target, samples, internalformat, width,
+                                   height);
 #endif
 }
 
@@ -1847,12 +1823,11 @@ void rglRenderbufferStorageMultisample( 	GLenum target,
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform1i(GLint location, GLint v0)
-{
+void rglUniform1i(GLint location, GLint v0) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform1i.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform1i.\n");
 #endif
-   glUniform1i(location, v0);
+  glUniform1i(location, v0);
 }
 
 /*
@@ -1861,12 +1836,11 @@ void rglUniform1i(GLint location, GLint v0)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform2f(GLint location, GLfloat v0, GLfloat v1)
-{
+void rglUniform2f(GLint location, GLfloat v0, GLfloat v1) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform2f.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform2f.\n");
 #endif
-   glUniform2f(location, v0, v1);
+  glUniform2f(location, v0, v1);
 }
 
 /*
@@ -1875,12 +1849,11 @@ void rglUniform2f(GLint location, GLfloat v0, GLfloat v1)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform2i(GLint location, GLint v0, GLint v1)
-{
+void rglUniform2i(GLint location, GLint v0, GLint v1) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform2i.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform2i.\n");
 #endif
-   glUniform2i(location, v0, v1);
+  glUniform2i(location, v0, v1);
 }
 
 /*
@@ -1889,12 +1862,11 @@ void rglUniform2i(GLint location, GLint v0, GLint v1)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform2fv(GLint location, GLsizei count, const GLfloat *value)
-{
+void rglUniform2fv(GLint location, GLsizei count, const GLfloat *value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform2fv.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform2fv.\n");
 #endif
-   glUniform2fv(location, count, value);
+  glUniform2fv(location, count, value);
 }
 
 /*
@@ -1903,12 +1875,11 @@ void rglUniform2fv(GLint location, GLsizei count, const GLfloat *value)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2)
-{
+void rglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform3f.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform3f.\n");
 #endif
-   glUniform3f(location, v0, v1, v2);
+  glUniform3f(location, v0, v1, v2);
 }
 
 /*
@@ -1917,12 +1888,11 @@ void rglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform3fv(GLint location, GLsizei count, const GLfloat *value)
-{
+void rglUniform3fv(GLint location, GLsizei count, const GLfloat *value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform3fv.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform3fv.\n");
 #endif
-   glUniform3fv(location, count, value);
+  glUniform3fv(location, count, value);
 }
 
 /*
@@ -1931,12 +1901,11 @@ void rglUniform3fv(GLint location, GLsizei count, const GLfloat *value)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3)
-{
+void rglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform4i.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform4i.\n");
 #endif
-   glUniform4i(location, v0, v1, v2, v3);
+  glUniform4i(location, v0, v1, v2, v3);
 }
 
 /*
@@ -1945,12 +1914,12 @@ void rglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
-{
+void rglUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2,
+                  GLfloat v3) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform4f.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform4f.\n");
 #endif
-   glUniform4f(location, v0, v1, v2, v3);
+  glUniform4f(location, v0, v1, v2, v3);
 }
 
 /*
@@ -1959,12 +1928,11 @@ void rglUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3
  * Core in:
  * OpenGL    : 2.0
  */
-void rglUniform4fv(GLint location, GLsizei count, const GLfloat *value)
-{
+void rglUniform4fv(GLint location, GLsizei count, const GLfloat *value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform4fv.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform4fv.\n");
 #endif
-   glUniform4fv(location, count, value);
+  glUniform4fv(location, count, value);
 }
 
 /*
@@ -1972,16 +1940,15 @@ void rglUniform4fv(GLint location, GLsizei count, const GLfloat *value)
  * Core in:
  * OpenGL    : 1.0
  */
-void rglPolygonOffset(GLfloat factor, GLfloat units)
-{
+void rglPolygonOffset(GLfloat factor, GLfloat units) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glPolygonOffset.\n");
+  log_cb(RETRO_LOG_INFO, "glPolygonOffset.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glPolygonOffset(factor, units);
-   gl_state.polygonoffset.used   = true;
-   gl_state.polygonoffset.factor = factor;
-   gl_state.polygonoffset.units  = units;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  glPolygonOffset(factor, units);
+  gl_state.polygonoffset.used = true;
+  gl_state.polygonoffset.factor = factor;
+  gl_state.polygonoffset.units = units;
 }
 
 /*
@@ -1990,12 +1957,11 @@ void rglPolygonOffset(GLfloat factor, GLfloat units)
  * Core in:
  * OpenGL    : 3.0
  */
-void rglGenFramebuffers(GLsizei n, GLuint *ids)
-{
+void rglGenFramebuffers(GLsizei n, GLuint *ids) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGenFramebuffers.\n");
+  log_cb(RETRO_LOG_INFO, "glGenFramebuffers.\n");
 #endif
-   glGenFramebuffers(n, ids);
+  glGenFramebuffers(n, ids);
 }
 
 /*
@@ -2004,14 +1970,19 @@ void rglGenFramebuffers(GLsizei n, GLuint *ids)
  * Core in:
  * OpenGL    : 3.0
  */
-void rglBindFramebuffer(GLenum target, GLuint framebuffer)
-{
+void rglBindFramebuffer(GLenum target, GLuint framebuffer) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindFramebuffer.\n");
+  log_cb(RETRO_LOG_INFO, "glBindFramebuffer.\n");
 #endif
-   glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
-   glBindFramebuffer(target, framebuffer);
-   gl_state.framebuf = framebuffer;
+  glsm_ctl(GLSM_CTL_IMM_VBO_DRAW, NULL);
+  /* In a libretro HW render context FBO 0 is the screen, not the
+   * RetroArch HW FBO.  The core stores _Ygl->default_fbo = 0 at init
+   * time and never updates it, so redirect every bind of 0 to the real
+   * HW FBO that context_reset captured in default_framebuffer. */
+  if (framebuffer == 0)
+    framebuffer = default_framebuffer;
+  glBindFramebuffer(target, framebuffer);
+  gl_state.framebuf = framebuffer;
 }
 
 /*
@@ -2021,13 +1992,12 @@ void rglBindFramebuffer(GLenum target, GLuint framebuffer)
  * OpenGL    : 2.0
  * OpenGLES  : 3.0
  */
-void rglDrawBuffers(GLsizei n, const GLenum *bufs)
-{
+void rglDrawBuffers(GLsizei n, const GLenum *bufs) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDrawBuffers.\n");
+  log_cb(RETRO_LOG_INFO, "glDrawBuffers.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glDrawBuffers(n, bufs);
+  glDrawBuffers(n, bufs);
 #endif
 }
 
@@ -2038,19 +2008,16 @@ void rglDrawBuffers(GLsizei n, const GLenum *bufs)
  * OpenGL    : 2.0
  * OpenGLES  : 3.0
  */
-void *rglMapBufferRange( 	GLenum target,
-  	GLintptr offset,
-  	GLsizeiptr length,
-  	GLbitfield access)
-{
+void *rglMapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length,
+                        GLbitfield access) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glMapBufferRange.\n");
+  log_cb(RETRO_LOG_INFO, "glMapBufferRange.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   return glMapBufferRange(target, offset, length, access);
+  return glMapBufferRange(target, offset, length, access);
 #else
-   printf("WARNING! Not implemented.\n");
-   return NULL;
+  printf("WARNING! Not implemented.\n");
+  return NULL;
 #endif
 }
 
@@ -2061,15 +2028,15 @@ void *rglMapBufferRange( 	GLenum target,
  * OpenGLES  : 3.1
  */
 void rglTexStorage2DMultisample(GLenum target, GLsizei samples,
-      GLenum internalformat, GLsizei width, GLsizei height,
-      GLboolean fixedsamplelocations)
-{
+                                GLenum internalformat, GLsizei width,
+                                GLsizei height,
+                                GLboolean fixedsamplelocations) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glTexStorage2DMultisample.\n");
+  log_cb(RETRO_LOG_INFO, "glTexStorage2DMultisample.\n");
 #endif
 #if defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_1)
-   glTexStorage2DMultisample(target, samples, internalformat,
-         width, height, fixedsamplelocations);
+  glTexStorage2DMultisample(target, samples, internalformat, width, height,
+                            fixedsamplelocations);
 #endif
 }
 
@@ -2079,14 +2046,12 @@ void rglTexStorage2DMultisample(GLenum target, GLsizei samples,
  * OpenGLES  : 3.0
  */
 void rglTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat,
-      GLsizei width, GLsizei height)
-{
+                     GLsizei width, GLsizei height) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glTexStorage2D.\n");
+  log_cb(RETRO_LOG_INFO, "glTexStorage2D.\n");
 #endif
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glTexStorage2D(target, levels, internalFormat, width, height);
-#endif
+  glTexImage2D(target, 0, internalFormat, width, height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, NULL);
 }
 /*
  *
@@ -2094,10 +2059,12 @@ void rglTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat,
  * OpenGL    : 3.2
  * OpenGLES  : 3.2
  */
-void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, GLvoid *indices, GLint basevertex)
-{
+void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end,
+                                    GLsizei count, GLenum type, GLvoid *indices,
+                                    GLint basevertex) {
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
-   glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices, basevertex);
+  glDrawRangeElementsBaseVertex(mode, start, end, count, type, indices,
+                                basevertex);
 #endif
 }
 
@@ -2107,15 +2074,15 @@ void rglDrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end, GLsiz
  * OpenGL    : 4.2
  * OpenGLES  : 3.1
  */
-void rglMemoryBarrier( 	GLbitfield barriers)
-{
+void rglMemoryBarrier(GLbitfield barriers) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glMemoryBarrier.\n");
+  log_cb(RETRO_LOG_INFO, "glMemoryBarrier.\n");
 #endif
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES3) && defined(HAVE_OPENGLES_3_1)
-   glMemoryBarrier(barriers);
+#if !defined(HAVE_OPENGLES) ||                                                 \
+    defined(HAVE_OPENGLES3) && defined(HAVE_OPENGLES_3_1)
+  glMemoryBarrier(barriers);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -2125,21 +2092,17 @@ void rglMemoryBarrier( 	GLbitfield barriers)
  * OpenGL    : 4.2
  * OpenGLES  : 3.1
  */
-void rglBindImageTexture( 	GLuint unit,
-  	GLuint texture,
-  	GLint level,
-  	GLboolean layered,
-  	GLint layer,
-  	GLenum access,
-  	GLenum format)
-{
+void rglBindImageTexture(GLuint unit, GLuint texture, GLint level,
+                         GLboolean layered, GLint layer, GLenum access,
+                         GLenum format) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindImageTexture.\n");
+  log_cb(RETRO_LOG_INFO, "glBindImageTexture.\n");
 #endif
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES3) && defined(HAVE_OPENGLES_3_1)
-   glBindImageTexture(unit, texture, level, layered, layer, access, format);
+#if !defined(HAVE_OPENGLES) ||                                                 \
+    defined(HAVE_OPENGLES3) && defined(HAVE_OPENGLES_3_1)
+  glBindImageTexture(unit, texture, level, layered, layer, access, format);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -2149,19 +2112,15 @@ void rglBindImageTexture( 	GLuint unit,
  * OpenGL    : 4.1
  * OpenGLES  : 3.1
  */
-void rglGetProgramBinary( 	GLuint program,
-  	GLsizei bufsize,
-  	GLsizei *length,
-  	GLenum *binaryFormat,
-  	void *binary)
-{
+void rglGetProgramBinary(GLuint program, GLsizei bufsize, GLsizei *length,
+                         GLenum *binaryFormat, void *binary) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGetProgramBinary.\n");
+  log_cb(RETRO_LOG_INFO, "glGetProgramBinary.\n");
 #endif
 #if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGetProgramBinary(program, bufsize, length, binaryFormat, binary);
+  glGetProgramBinary(program, bufsize, length, binaryFormat, binary);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
@@ -2171,52 +2130,40 @@ void rglGetProgramBinary( 	GLuint program,
  * OpenGL    : 4.1
  * OpenGLES  : 3.1
  */
-void rglProgramBinary(GLuint program,
-  	GLenum binaryFormat,
-  	const void *binary,
-  	GLsizei length)
-{
+void rglProgramBinary(GLuint program, GLenum binaryFormat, const void *binary,
+                      GLsizei length) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glProgramBinary.\n");
+  log_cb(RETRO_LOG_INFO, "glProgramBinary.\n");
 #endif
-#if !defined(HAVE_OPENGLES) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_1)
-   glProgramBinary(program, binaryFormat, binary, length);
+#if !defined(HAVE_OPENGLES) ||                                                 \
+    defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_1)
+  glProgramBinary(program, binaryFormat, binary, length);
 #else
-   printf("WARNING! Not implemented.\n");
+  printf("WARNING! Not implemented.\n");
 #endif
 }
 
-void rglTexImage2DMultisample( 	GLenum target,
-  	GLsizei samples,
-  	GLenum internalformat,
-  	GLsizei width,
-  	GLsizei height,
-  	GLboolean fixedsamplelocations)
-{
+void rglTexImage2DMultisample(GLenum target, GLsizei samples,
+                              GLenum internalformat, GLsizei width,
+                              GLsizei height, GLboolean fixedsamplelocations) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glTexImage2DMultisample.\n");
+  log_cb(RETRO_LOG_INFO, "glTexImage2DMultisample.\n");
 #endif
 #ifndef HAVE_OPENGLES
-   glTexImage2DMultisample(target, samples, internalformat, width, height, fixedsamplelocations);
+  glTexImage2DMultisample(target, samples, internalformat, width, height,
+                          fixedsamplelocations);
 #endif
 }
 
-void rglTexImage3D(	GLenum target,
- 	GLint level,
- 	GLint internalFormat,
- 	GLsizei width,
- 	GLsizei height,
- 	GLsizei depth,
- 	GLint border,
- 	GLenum format,
- 	GLenum type,
- 	const GLvoid * data)
-{
+void rglTexImage3D(GLenum target, GLint level, GLint internalFormat,
+                   GLsizei width, GLsizei height, GLsizei depth, GLint border,
+                   GLenum format, GLenum type, const GLvoid *data) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glTexImage3D.\n");
+  log_cb(RETRO_LOG_INFO, "glTexImage3D.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glTexImage3D(target, level, internalFormat, width, height, depth, border, format, type, data);
+  glTexImage3D(target, level, internalFormat, width, height, depth, border,
+               format, type, data);
 #endif
 }
 
@@ -2225,15 +2172,14 @@ void rglTexImage3D(	GLenum target,
  * Core in:
  * OpenGL    : 1.5
  */
-void * rglMapBuffer(	GLenum target, GLenum access)
-{
+void *rglMapBuffer(GLenum target, GLenum access) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glMapBuffer.\n");
+  log_cb(RETRO_LOG_INFO, "glMapBuffer.\n");
 #endif
 #if defined(HAVE_OPENGLES)
-   return glMapBufferOES(target, access);
+  return glMapBufferOES(target, access);
 #else
-   return glMapBuffer(target, access);
+  return glMapBuffer(target, access);
 #endif
 }
 
@@ -2242,32 +2188,29 @@ void * rglMapBuffer(	GLenum target, GLenum access)
  * Core in:
  * OpenGL    : 1.5
  */
-GLboolean rglUnmapBuffer( 	GLenum target)
-{
+GLboolean rglUnmapBuffer(GLenum target) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUnmapBuffer.\n");
+  log_cb(RETRO_LOG_INFO, "glUnmapBuffer.\n");
 #endif
 #if defined(HAVE_OPENGLES)
-   return glUnmapBufferOES(target);
+  return glUnmapBufferOES(target);
 #else
-   return glUnmapBuffer(target);
+  return glUnmapBuffer(target);
 #endif
 }
 
-void rglBlendEquation(GLenum mode)
-{
+void rglBlendEquation(GLenum mode) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBlendEquation.\n");
+  log_cb(RETRO_LOG_INFO, "glBlendEquation.\n");
 #endif
-   glBlendEquation(mode);
+  glBlendEquation(mode);
 }
 
-void rglBlendColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
-{
+void rglBlendColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBlendColor.\n");
+  log_cb(RETRO_LOG_INFO, "glBlendColor.\n");
 #endif
-   glBlendColor(red, green, blue, alpha);
+  glBlendColor(red, green, blue, alpha);
 }
 
 /*
@@ -2276,12 +2219,11 @@ void rglBlendColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
  * Core in:
  * OpenGL    : 2.0
  */
-void rglBlendEquationSeparate(GLenum modeRGB, GLenum modeAlpha)
-{
+void rglBlendEquationSeparate(GLenum modeRGB, GLenum modeAlpha) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBlendEquationSeparate.\n");
+  log_cb(RETRO_LOG_INFO, "glBlendEquationSeparate.\n");
 #endif
-   glBlendEquationSeparate(modeRGB, modeAlpha);
+  glBlendEquationSeparate(modeRGB, modeAlpha);
 }
 
 /*
@@ -2290,41 +2232,18 @@ void rglBlendEquationSeparate(GLenum modeRGB, GLenum modeAlpha)
  * OpenGL    : 2.0
  * OpenGLES  : 3.2
  */
-void rglCopyImageSubData( 	GLuint srcName,
-  	GLenum srcTarget,
-  	GLint srcLevel,
-  	GLint srcX,
-  	GLint srcY,
-  	GLint srcZ,
-  	GLuint dstName,
-  	GLenum dstTarget,
-  	GLint dstLevel,
-  	GLint dstX,
-  	GLint dstY,
-  	GLint dstZ,
-  	GLsizei srcWidth,
-  	GLsizei srcHeight,
-  	GLsizei srcDepth)
-{
+void rglCopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
+                         GLint srcX, GLint srcY, GLint srcZ, GLuint dstName,
+                         GLenum dstTarget, GLint dstLevel, GLint dstX,
+                         GLint dstY, GLint dstZ, GLsizei srcWidth,
+                         GLsizei srcHeight, GLsizei srcDepth) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glCopyImageSubData.\n");
+  log_cb(RETRO_LOG_INFO, "glCopyImageSubData.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES_3_2)
-   glCopyImageSubData(srcName,
-         srcTarget,
-         srcLevel,
-         srcX,
-         srcY,
-         srcZ,
-         dstName,
-         dstTarget,
-         dstLevel,
-         dstX,
-         dstY,
-         dstZ,
-         srcWidth,
-         srcHeight,
-         srcDepth);
+  glCopyImageSubData(srcName, srcTarget, srcLevel, srcX, srcY, srcZ, dstName,
+                     dstTarget, dstLevel, dstX, dstY, dstZ, srcWidth, srcHeight,
+                     srcDepth);
 #endif
 }
 
@@ -2335,13 +2254,12 @@ void rglCopyImageSubData( 	GLuint srcName,
  * OpenGL    : 3.0
  * OpenGLES  : 3.0
  */
-void rglBindVertexArray(GLuint array)
-{
+void rglBindVertexArray(GLuint array) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBindVertexArray.\n");
+  log_cb(RETRO_LOG_INFO, "glBindVertexArray.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glBindVertexArray(array);
+  glBindVertexArray(array);
 #endif
 }
 
@@ -2352,13 +2270,12 @@ void rglBindVertexArray(GLuint array)
  * OpenGL    : 3.0
  * OpenGLES  : 3.0
  */
-void rglGenVertexArrays(GLsizei n, GLuint *arrays)
-{
+void rglGenVertexArrays(GLsizei n, GLuint *arrays) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glGenVertexArrays.\n");
+  log_cb(RETRO_LOG_INFO, "glGenVertexArrays.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glGenVertexArrays(n, arrays);
+  glGenVertexArrays(n, arrays);
 #endif
 }
 
@@ -2369,13 +2286,12 @@ void rglGenVertexArrays(GLsizei n, GLuint *arrays)
  * OpenGL    : 3.0
  * OpenGLES  : 3.0
  */
-void rglDeleteVertexArrays(GLsizei n, const GLuint *arrays)
-{
+void rglDeleteVertexArrays(GLsizei n, const GLuint *arrays) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDeleteVertexArrays.\n");
+  log_cb(RETRO_LOG_INFO, "glDeleteVertexArrays.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glDeleteVertexArrays(n, arrays);
+  glDeleteVertexArrays(n, arrays);
 #endif
 }
 
@@ -2385,15 +2301,14 @@ void rglDeleteVertexArrays(GLsizei n, const GLuint *arrays)
  * OpenGL    : 3.2
  * OpenGLES  : 3.0
  */
-void *rglFenceSync(GLenum condition, GLbitfield flags)
-{
+void *rglFenceSync(GLenum condition, GLbitfield flags) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glFenceSync.\n");
+  log_cb(RETRO_LOG_INFO, "glFenceSync.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   return (GLsync)glFenceSync(condition, flags);
+  return (GLsync)glFenceSync(condition, flags);
 #else
-   return NULL;
+  return NULL;
 #endif
 }
 
@@ -2403,10 +2318,9 @@ void *rglFenceSync(GLenum condition, GLbitfield flags)
  * OpenGL    : 3.2
  * OpenGLES  : 3.0
  */
-void rglDeleteSync(void * sync)
-{
+void rglDeleteSync(void *sync) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDeleteSync.\n");
+  log_cb(RETRO_LOG_INFO, "glDeleteSync.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
   glDeleteSync((GLsync)sync);
@@ -2419,13 +2333,12 @@ void rglDeleteSync(void * sync)
  * OpenGL    : 3.2
  * OpenGLES  : 3.0
  */
-void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
-{
+void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glWaitSync.\n");
+  log_cb(RETRO_LOG_INFO, "glWaitSync.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glWaitSync((GLsync)sync, flags, (GLuint64)timeout);
+  glWaitSync((GLsync)sync, flags, (GLuint64)timeout);
 #endif
 }
 
@@ -2435,13 +2348,13 @@ void rglWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
  * OpenGL    : 4.4
  * OpenGLES  : Not available
  */
-void rglBufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data, GLbitfield flags)
-{
+void rglBufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
+                      GLbitfield flags) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glBufferStorage.\n");
+  log_cb(RETRO_LOG_INFO, "glBufferStorage.\n");
 #endif
 #if defined(HAVE_OPENGL)
-   glBufferStorage(target, size, data, flags);
+  glBufferStorage(target, size, data, flags);
 #endif
 }
 
@@ -2452,14 +2365,11 @@ void rglBufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data, GLbitf
  * OpenGLES  : 2.0
  */
 
-void rglUniform2iv(	GLint location,
- 	GLsizei count,
- 	const GLint *value)
-{
+void rglUniform2iv(GLint location, GLsizei count, const GLint *value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform2iv.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform2iv.\n");
 #endif
-   glUniform2iv(location, count, value);
+  glUniform2iv(location, count, value);
 }
 
 /*
@@ -2469,15 +2379,12 @@ void rglUniform2iv(	GLint location,
  * OpenGLES  : ?.?
  */
 
-void rglUniform2uiv(	GLint location,
- 	GLsizei count,
- 	const GLuint *value)
-{
+void rglUniform2uiv(GLint location, GLsizei count, const GLuint *value) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glUniform2uiv.\n");
+  log_cb(RETRO_LOG_INFO, "glUniform2uiv.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
-   glUniform2uiv(location, count, value);
+  glUniform2uiv(location, count, value);
 #endif
 }
 
@@ -2487,20 +2394,15 @@ void rglUniform2uiv(	GLint location,
  * OpenGL    : 4.3
  * OpenGLES  : ?.?
  */
-void rglTextureView(	GLuint texture,
- 	GLenum target,
- 	GLuint origtexture,
- 	GLenum internalformat,
- 	GLuint minlevel,
- 	GLuint numlevels,
- 	GLuint minlayer,
- 	GLuint numlayers)
-{
+void rglTextureView(GLuint texture, GLenum target, GLuint origtexture,
+                    GLenum internalformat, GLuint minlevel, GLuint numlevels,
+                    GLuint minlayer, GLuint numlayers) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glTextureView.\n");
+  log_cb(RETRO_LOG_INFO, "glTextureView.\n");
 #endif
 #if defined(HAVE_OPENGL)
-   glTextureView(texture, target, origtexture, internalformat, minlevel, numlevels, minlayer, numlayers);
+  glTextureView(texture, target, origtexture, internalformat, minlevel,
+                numlevels, minlayer, numlayers);
 #endif
 }
 
@@ -2510,10 +2412,10 @@ void rglTextureView(	GLuint texture,
  * OpenGL    : 3.0
  * OpenGLES  : 3.0
  */
-void rglFlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length)
-{
+void rglFlushMappedBufferRange(GLenum target, GLintptr offset,
+                               GLsizeiptr length) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glFlushMappedBufferRange.\n");
+  log_cb(RETRO_LOG_INFO, "glFlushMappedBufferRange.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
   glFlushMappedBufferRange(target, offset, length);
@@ -2521,7 +2423,7 @@ void rglFlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length
 }
 
 #ifndef GL_WAIT_FAILED
-#define GL_WAIT_FAILED                                   0x911D
+#define GL_WAIT_FAILED 0x911D
 #endif
 
 /*
@@ -2530,10 +2432,9 @@ void rglFlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length
  * OpenGL    : 3.2
  * OpenGLES  : 3.0
  */
-GLenum rglClientWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
-{
+GLenum rglClientWaitSync(void *sync, GLbitfield flags, uint64_t timeout) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glClientWaitSync.\n");
+  log_cb(RETRO_LOG_INFO, "glClientWaitSync.\n");
 #endif
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) && defined(HAVE_OPENGLES3)
   return glClientWaitSync((GLsync)sync, flags, (GLuint64)timeout);
@@ -2549,349 +2450,312 @@ GLenum rglClientWaitSync(void *sync, GLbitfield flags, uint64_t timeout)
  * OpenGLES  : Not available
  */
 void rglDrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type,
-			       GLvoid *indices, GLint basevertex)
-{
+                               GLvoid *indices, GLint basevertex) {
 #ifdef GLSM_DEBUG
-   log_cb(RETRO_LOG_INFO, "glDrawElementsBaseVertex.\n");
+  log_cb(RETRO_LOG_INFO, "glDrawElementsBaseVertex.\n");
 #endif
 #if defined(HAVE_OPENGL)
-   glDrawElementsBaseVertex(mode, count, type, indices, basevertex);
+  glDrawElementsBaseVertex(mode, count, type, indices, basevertex);
 #endif
 }
 
 /* GLSM-side */
 
-static void glsm_state_setup(void)
-{
-   unsigned i;
+static void glsm_state_setup(void) {
+  unsigned i;
 
-   gl_state.cap_translate[SGL_DEPTH_TEST]           = GL_DEPTH_TEST;
-   gl_state.cap_translate[SGL_BLEND]                = GL_BLEND;
-   gl_state.cap_translate[SGL_POLYGON_OFFSET_FILL]  = GL_POLYGON_OFFSET_FILL;
-   gl_state.cap_translate[SGL_FOG]                  = GL_FOG;
-   gl_state.cap_translate[SGL_CULL_FACE]            = GL_CULL_FACE;
-   gl_state.cap_translate[SGL_ALPHA_TEST]           = GL_ALPHA_TEST;
-   gl_state.cap_translate[SGL_SCISSOR_TEST]         = GL_SCISSOR_TEST;
-   gl_state.cap_translate[SGL_STENCIL_TEST]         = GL_STENCIL_TEST;
-
-#ifndef HAVE_OPENGLES
-   gl_state.cap_translate[SGL_COLOR_LOGIC_OP]       = GL_COLOR_LOGIC_OP;
-   gl_state.cap_translate[SGL_CLIP_DISTANCE0]       = GL_CLIP_DISTANCE0;
-   gl_state.cap_translate[SGL_DEPTH_CLAMP]          = GL_DEPTH_CLAMP;
-#endif
-
-   for (i = 0; i < MAX_ATTRIB; i++)
-   {
-      gl_state.vertex_attrib_pointer.enabled[i] = 0;
-      gl_state.attrib_pointer.used[i] = 0;
-   }
-
-   glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &glsm_max_textures);
-
-   gl_state.bind_textures.ids           = (GLuint*)calloc(glsm_max_textures, sizeof(GLuint));
-
-   default_framebuffer                  = glsm_get_current_framebuffer();
-   gl_state.framebuf                    = default_framebuffer;
-   gl_state.cullface.mode               = GL_BACK;
-   gl_state.frontface.mode              = GL_CCW;
-
-   gl_state.blendfunc_separate.used     = false;
-   gl_state.blendfunc_separate.srcRGB   = GL_ONE;
-   gl_state.blendfunc_separate.dstRGB   = GL_ZERO;
-   gl_state.blendfunc_separate.srcAlpha = GL_ONE;
-   gl_state.blendfunc_separate.dstAlpha = GL_ZERO;
-
-   gl_state.depthfunc.used              = false;
-
-   gl_state.colormask.used              = false;
-   gl_state.colormask.red               = GL_TRUE;
-   gl_state.colormask.green             = GL_TRUE;
-   gl_state.colormask.blue              = GL_TRUE;
-   gl_state.colormask.alpha             = GL_TRUE;
-
-   gl_state.polygonoffset.used          = false;
-
-   gl_state.depthfunc.func              = GL_LESS;
+  gl_state.cap_translate[SGL_DEPTH_TEST] = GL_DEPTH_TEST;
+  gl_state.cap_translate[SGL_BLEND] = GL_BLEND;
+  gl_state.cap_translate[SGL_POLYGON_OFFSET_FILL] = GL_POLYGON_OFFSET_FILL;
+  gl_state.cap_translate[SGL_FOG] = GL_FOG;
+  gl_state.cap_translate[SGL_CULL_FACE] = GL_CULL_FACE;
+  gl_state.cap_translate[SGL_ALPHA_TEST] = GL_ALPHA_TEST;
+  gl_state.cap_translate[SGL_SCISSOR_TEST] = GL_SCISSOR_TEST;
+  gl_state.cap_translate[SGL_STENCIL_TEST] = GL_STENCIL_TEST;
 
 #ifndef HAVE_OPENGLES
-   gl_state.colorlogicop                = GL_COPY;
+  gl_state.cap_translate[SGL_COLOR_LOGIC_OP] = GL_COLOR_LOGIC_OP;
+  gl_state.cap_translate[SGL_CLIP_DISTANCE0] = GL_CLIP_DISTANCE0;
+  gl_state.cap_translate[SGL_DEPTH_CLAMP] = GL_DEPTH_CLAMP;
 #endif
 
-#ifdef CORE
-   glGenVertexArrays(1, &gl_state.vao);
+  for (i = 0; i < MAX_ATTRIB; i++) {
+    gl_state.vertex_attrib_pointer.enabled[i] = 0;
+    gl_state.attrib_pointer.used[i] = 0;
+  }
+
+  glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &glsm_max_textures);
+
+  gl_state.bind_textures.ids =
+      (GLuint *)calloc(glsm_max_textures, sizeof(GLuint));
+
+  default_framebuffer = glsm_get_current_framebuffer();
+  gl_state.framebuf = default_framebuffer;
+  gl_state.cullface.mode = GL_BACK;
+  gl_state.frontface.mode = GL_CCW;
+
+  gl_state.blendfunc_separate.used = false;
+  gl_state.blendfunc_separate.srcRGB = GL_ONE;
+  gl_state.blendfunc_separate.dstRGB = GL_ZERO;
+  gl_state.blendfunc_separate.srcAlpha = GL_ONE;
+  gl_state.blendfunc_separate.dstAlpha = GL_ZERO;
+
+  gl_state.depthfunc.used = false;
+
+  gl_state.colormask.used = false;
+  gl_state.colormask.red = GL_TRUE;
+  gl_state.colormask.green = GL_TRUE;
+  gl_state.colormask.blue = GL_TRUE;
+  gl_state.colormask.alpha = GL_TRUE;
+
+  gl_state.polygonoffset.used = false;
+
+  gl_state.depthfunc.func = GL_LESS;
+
+#ifndef HAVE_OPENGLES
+  gl_state.colorlogicop = GL_COPY;
+#endif
+
+#if defined(CORE) || defined(_OGL3_) || defined(ARCH_IS_MACOSX)
+  if (!gl_state.vao)
+    glGenVertexArrays(1, &gl_state.vao);
 #endif
 }
 
-static void glsm_state_bind(void)
-{
-   unsigned i;
-#ifdef CORE
-   glBindVertexArray(gl_state.vao);
+static void glsm_state_bind(void) {
+  unsigned i;
+#if defined(CORE) || defined(_OGL3_) || defined(ARCH_IS_MACOSX)
+  glBindVertexArray(gl_state.vao);
 #endif
-   glBindBuffer(GL_ARRAY_BUFFER, gl_state.array_buffer);
+  glBindBuffer(GL_ARRAY_BUFFER, gl_state.array_buffer);
 
-   for (i = 0; i < MAX_ATTRIB; i++)
-   {
-      if (gl_state.vertex_attrib_pointer.enabled[i])
-         glEnableVertexAttribArray(i);
-      else
-         glDisableVertexAttribArray(i);
-
-      if (gl_state.attrib_pointer.used[i] && gl_state.attrib_pointer.buffer[i] == gl_state.array_buffer)
-      {
-         glVertexAttribPointer(
-               i,
-               gl_state.attrib_pointer.size[i],
-               gl_state.attrib_pointer.type[i],
-               gl_state.attrib_pointer.normalized[i],
-               gl_state.attrib_pointer.stride[i],
-               gl_state.attrib_pointer.pointer[i]);
-      }
-   }
-
-   glBindFramebuffer(RARCH_GL_FRAMEBUFFER, default_framebuffer);
-
-   if (gl_state.blendfunc.used)
-      glBlendFunc(
-            gl_state.blendfunc.sfactor,
-            gl_state.blendfunc.dfactor);
-
-   if (gl_state.blendfunc_separate.used)
-      glBlendFuncSeparate(
-            gl_state.blendfunc_separate.srcRGB,
-            gl_state.blendfunc_separate.dstRGB,
-            gl_state.blendfunc_separate.srcAlpha,
-            gl_state.blendfunc_separate.dstAlpha
-            );
-
-   glClearColor(
-         gl_state.clear_color.r,
-         gl_state.clear_color.g,
-         gl_state.clear_color.b,
-         gl_state.clear_color.a);
-
-   if (gl_state.depthfunc.used)
-      glDepthFunc(gl_state.depthfunc.func);
-
-   if (gl_state.colormask.used)
-      glColorMask(
-            gl_state.colormask.red,
-            gl_state.colormask.green,
-            gl_state.colormask.blue,
-            gl_state.colormask.alpha);
-
-   if (gl_state.cullface.used)
-      glCullFace(gl_state.cullface.mode);
-
-   if (gl_state.depthmask.used)
-      glDepthMask(gl_state.depthmask.mask);
-
-   if (gl_state.polygonoffset.used)
-      glPolygonOffset(
-            gl_state.polygonoffset.factor,
-            gl_state.polygonoffset.units);
-
-   if (gl_state.scissor.used)
-      glScissor(
-            gl_state.scissor.x,
-            gl_state.scissor.y,
-            gl_state.scissor.w,
-            gl_state.scissor.h);
-
-   glUseProgram(gl_state.program);
-
-   glViewport(
-         gl_state.viewport.x,
-         gl_state.viewport.y,
-         gl_state.viewport.w,
-         gl_state.viewport.h);
-
-   for(i = 0; i < SGL_CAP_MAX; i ++)
-   {
-      if (gl_state.cap_state[i])
-         glEnable(gl_state.cap_translate[i]);
-   }
-
-   if (gl_state.frontface.used)
-      glFrontFace(gl_state.frontface.mode);
-
-   if (gl_state.stencilmask.used)
-      glStencilMask(gl_state.stencilmask.mask);
-
-   if (gl_state.stencilop.used)
-      glStencilOp(gl_state.stencilop.sfail,
-            gl_state.stencilop.dpfail,
-            gl_state.stencilop.dppass);
-
-   if (gl_state.stencilfunc.used)
-      glStencilFunc(
-            gl_state.stencilfunc.func,
-            gl_state.stencilfunc.ref,
-            gl_state.stencilfunc.mask);
-
-   for (i = 0; i < glsm_max_textures; i ++)
-   {
-      glActiveTexture(GL_TEXTURE0 + i);
-      glBindTexture(GL_TEXTURE_2D, gl_state.bind_textures.ids[i]);
-   }
-
-   glActiveTexture(GL_TEXTURE0 + gl_state.active_texture);
-}
-
-static void glsm_state_unbind(void)
-{
-   unsigned i;
-#ifdef CORE
-   glBindVertexArray(0);
-#endif
-   for (i = 0; i < SGL_CAP_MAX; i ++)
-   {
-      if (gl_state.cap_state[i])
-         glDisable(gl_state.cap_translate[i]);
-   }
-
-   glBlendFunc(GL_ONE, GL_ZERO);
-
-   if (gl_state.colormask.used)
-      glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-   if (gl_state.blendfunc_separate.used)
-      glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
-
-   if (gl_state.cullface.used)
-      glCullFace(GL_BACK);
-
-   if (gl_state.depthmask.used)
-      glDepthMask(GL_TRUE);
-
-   if (gl_state.polygonoffset.used)
-      glPolygonOffset(0, 0);
-
-   glUseProgram(0);
-   glClearColor(0,0,0,0.0f);
-
-   if (gl_state.depthrange.used)
-      rglDepthRange(0, 1);
-
-   glStencilMask(1);
-   glFrontFace(GL_CCW);
-   if (gl_state.depthfunc.used)
-      glDepthFunc(GL_LESS);
-
-   if (gl_state.stencilop.used)
-      glStencilOp(GL_KEEP,GL_KEEP, GL_KEEP);
-
-   if (gl_state.stencilfunc.used)
-      glStencilFunc(GL_ALWAYS,0,1);
-
-   /* Clear textures */
-   for (i = 0; i < glsm_max_textures; i ++)
-   {
-      glActiveTexture(GL_TEXTURE0 + i);
-      glBindTexture(GL_TEXTURE_2D, 0);
-   }
-   glActiveTexture(GL_TEXTURE0);
-
-   for (i = 0; i < MAX_ATTRIB; i ++)
+  for (i = 0; i < MAX_ATTRIB; i++) {
+    if (gl_state.vertex_attrib_pointer.enabled[i])
+      glEnableVertexAttribArray(i);
+    else
       glDisableVertexAttribArray(i);
 
-   glBindFramebuffer(RARCH_GL_FRAMEBUFFER, 0);
+    if (gl_state.attrib_pointer.used[i] &&
+        gl_state.attrib_pointer.buffer[i] == gl_state.array_buffer) {
+      glVertexAttribPointer(i, gl_state.attrib_pointer.size[i],
+                            gl_state.attrib_pointer.type[i],
+                            gl_state.attrib_pointer.normalized[i],
+                            gl_state.attrib_pointer.stride[i],
+                            gl_state.attrib_pointer.pointer[i]);
+    }
+  }
+
+  glBindFramebuffer(RARCH_GL_FRAMEBUFFER, default_framebuffer);
+
+  if (gl_state.blendfunc.used)
+    glBlendFunc(gl_state.blendfunc.sfactor, gl_state.blendfunc.dfactor);
+
+  if (gl_state.blendfunc_separate.used)
+    glBlendFuncSeparate(gl_state.blendfunc_separate.srcRGB,
+                        gl_state.blendfunc_separate.dstRGB,
+                        gl_state.blendfunc_separate.srcAlpha,
+                        gl_state.blendfunc_separate.dstAlpha);
+
+  glClearColor(gl_state.clear_color.r, gl_state.clear_color.g,
+               gl_state.clear_color.b, gl_state.clear_color.a);
+
+  if (gl_state.depthfunc.used)
+    glDepthFunc(gl_state.depthfunc.func);
+
+  if (gl_state.colormask.used)
+    glColorMask(gl_state.colormask.red, gl_state.colormask.green,
+                gl_state.colormask.blue, gl_state.colormask.alpha);
+
+  if (gl_state.cullface.used)
+    glCullFace(gl_state.cullface.mode);
+
+  if (gl_state.depthmask.used)
+    glDepthMask(gl_state.depthmask.mask);
+
+  if (gl_state.polygonoffset.used)
+    glPolygonOffset(gl_state.polygonoffset.factor,
+                    gl_state.polygonoffset.units);
+
+  if (gl_state.scissor.used)
+    glScissor(gl_state.scissor.x, gl_state.scissor.y, gl_state.scissor.w,
+              gl_state.scissor.h);
+
+  glUseProgram(gl_state.program);
+
+  glViewport(gl_state.viewport.x, gl_state.viewport.y, gl_state.viewport.w,
+             gl_state.viewport.h);
+
+  for (i = 0; i < SGL_CAP_MAX; i++) {
+    if (gl_state.cap_state[i])
+      glEnable(gl_state.cap_translate[i]);
+  }
+
+  if (gl_state.frontface.used)
+    glFrontFace(gl_state.frontface.mode);
+
+  if (gl_state.stencilmask.used)
+    glStencilMask(gl_state.stencilmask.mask);
+
+  if (gl_state.stencilop.used)
+    glStencilOp(gl_state.stencilop.sfail, gl_state.stencilop.dpfail,
+                gl_state.stencilop.dppass);
+
+  if (gl_state.stencilfunc.used)
+    glStencilFunc(gl_state.stencilfunc.func, gl_state.stencilfunc.ref,
+                  gl_state.stencilfunc.mask);
+
+  for (i = 0; i < glsm_max_textures; i++) {
+    glActiveTexture(GL_TEXTURE0 + i);
+    glBindTexture(GL_TEXTURE_2D, gl_state.bind_textures.ids[i]);
+  }
+
+  glActiveTexture(GL_TEXTURE0 + gl_state.active_texture);
 }
 
-static bool glsm_state_ctx_destroy(void *data)
-{
-   if (gl_state.bind_textures.ids)
-      free(gl_state.bind_textures.ids);
-   gl_state.bind_textures.ids = NULL;
+static void glsm_state_unbind(void) {
+  unsigned i;
+#if defined(CORE) || defined(_OGL3_) || defined(ARCH_IS_MACOSX)
+  glBindVertexArray(0);
+#endif
+  for (i = 0; i < SGL_CAP_MAX; i++) {
+    if (gl_state.cap_state[i])
+      glDisable(gl_state.cap_translate[i]);
+  }
 
-   return true;
+  glBlendFunc(GL_ONE, GL_ZERO);
+
+  if (gl_state.colormask.used)
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  if (gl_state.blendfunc_separate.used)
+    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
+
+  if (gl_state.cullface.used)
+    glCullFace(GL_BACK);
+
+  if (gl_state.depthmask.used)
+    glDepthMask(GL_TRUE);
+
+  if (gl_state.polygonoffset.used)
+    glPolygonOffset(0, 0);
+
+  glUseProgram(0);
+  glClearColor(0, 0, 0, 0.0f);
+
+  if (gl_state.depthrange.used)
+    rglDepthRange(0, 1);
+
+  glStencilMask(1);
+  glFrontFace(GL_CCW);
+  if (gl_state.depthfunc.used)
+    glDepthFunc(GL_LESS);
+
+  if (gl_state.stencilop.used)
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+  if (gl_state.stencilfunc.used)
+    glStencilFunc(GL_ALWAYS, 0, 1);
+
+  /* Clear textures */
+  for (i = 0; i < glsm_max_textures; i++) {
+    glActiveTexture(GL_TEXTURE0 + i);
+    glBindTexture(GL_TEXTURE_2D, 0);
+  }
+  glActiveTexture(GL_TEXTURE0);
+
+  for (i = 0; i < MAX_ATTRIB; i++)
+    glDisableVertexAttribArray(i);
+
+  glBindFramebuffer(RARCH_GL_FRAMEBUFFER, 0);
 }
 
-static bool glsm_state_ctx_init(glsm_ctx_params_t *params)
-{
-   if (!params || !params->environ_cb)
-      return false;
+static bool glsm_state_ctx_destroy(void *data) {
+  if (gl_state.bind_textures.ids)
+    free(gl_state.bind_textures.ids);
+  gl_state.bind_textures.ids = NULL;
+
+  return true;
+}
+
+static bool glsm_state_ctx_init(glsm_ctx_params_t *params) {
+  if (!params || !params->environ_cb)
+    return false;
 
 #ifdef HAVE_OPENGLES
 #if defined(HAVE_OPENGLES_3_1)
-   hw_render.context_type       = RETRO_HW_CONTEXT_OPENGLES_VERSION;
-   hw_render.version_major      = 3;
-   hw_render.version_minor      = 1;
+  hw_render.context_type = RETRO_HW_CONTEXT_OPENGLES_VERSION;
+  hw_render.version_major = 3;
+  hw_render.version_minor = 1;
 #elif defined(HAVE_OPENGLES3)
-   hw_render.context_type       = RETRO_HW_CONTEXT_OPENGLES3;
+  hw_render.context_type = RETRO_HW_CONTEXT_OPENGLES3;
 #else
-   hw_render.context_type       = RETRO_HW_CONTEXT_OPENGLES2;
+  hw_render.context_type = RETRO_HW_CONTEXT_OPENGLES2;
 #endif
 #else
-   hw_render.context_type       = RETRO_HW_CONTEXT_OPENGL;
-   if (params->context_type != RETRO_HW_CONTEXT_NONE)
-      hw_render.context_type    = params->context_type;
-   if (params->major != 0)
-      hw_render.version_major   = params->major;
-   if (params->minor != 0)
-      hw_render.version_minor   = params->minor;
+  hw_render.context_type = RETRO_HW_CONTEXT_OPENGL;
+  if (params->context_type != RETRO_HW_CONTEXT_NONE)
+    hw_render.context_type = params->context_type;
+  if (params->major != 0)
+    hw_render.version_major = params->major;
+  if (params->minor != 0)
+    hw_render.version_minor = params->minor;
 #endif
 
-   hw_render.context_reset      = params->context_reset;
-   hw_render.context_destroy    = params->context_destroy;
-   hw_render.stencil            = params->stencil;
-   hw_render.depth              = true;
-   hw_render.bottom_left_origin = true;
-   hw_render.cache_context      = false;
+  hw_render.context_reset = params->context_reset;
+  hw_render.context_destroy = params->context_destroy;
+  hw_render.stencil = params->stencil;
+  hw_render.depth = true;
+  hw_render.bottom_left_origin = true;
+  hw_render.cache_context = false;
 
-   if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
+  if (!params->environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
+    return false;
+
+  return true;
+}
+
+GLuint glsm_get_current_framebuffer(void) {
+  return hw_render.get_current_framebuffer();
+}
+
+bool glsm_ctl(enum glsm_state_ctl state, void *data) {
+  switch (state) {
+  case GLSM_CTL_IMM_VBO_DRAW:
+    return false;
+  case GLSM_CTL_IMM_VBO_DISABLE:
+    return false;
+  case GLSM_CTL_IS_IMM_VBO:
+    return false;
+  case GLSM_CTL_SET_IMM_VBO:
+    break;
+  case GLSM_CTL_UNSET_IMM_VBO:
+    break;
+  case GLSM_CTL_PROC_ADDRESS_GET: {
+    glsm_ctx_proc_address_t *proc = (glsm_ctx_proc_address_t *)data;
+    if (!hw_render.get_proc_address)
       return false;
+    proc->addr = hw_render.get_proc_address;
+  } break;
+  case GLSM_CTL_STATE_CONTEXT_RESET:
+    rglgen_resolve_symbols(hw_render.get_proc_address);
+    break;
+  case GLSM_CTL_STATE_CONTEXT_DESTROY:
+    glsm_state_ctx_destroy(data);
+    break;
+  case GLSM_CTL_STATE_CONTEXT_INIT:
+    return glsm_state_ctx_init((glsm_ctx_params_t *)data);
+  case GLSM_CTL_STATE_SETUP:
+    glsm_state_setup();
+    break;
+  case GLSM_CTL_STATE_UNBIND:
+    glsm_state_unbind();
+    break;
+  case GLSM_CTL_STATE_BIND:
+    glsm_state_bind();
+    break;
+  case GLSM_CTL_NONE:
+  default:
+    break;
+  }
 
-   return true;
-}
-
-GLuint glsm_get_current_framebuffer(void)
-{
-   return hw_render.get_current_framebuffer();
-}
-
-bool glsm_ctl(enum glsm_state_ctl state, void *data)
-{
-   switch (state)
-   {
-      case GLSM_CTL_IMM_VBO_DRAW:
-         return false;
-      case GLSM_CTL_IMM_VBO_DISABLE:
-         return false;
-      case GLSM_CTL_IS_IMM_VBO:
-         return false;
-      case GLSM_CTL_SET_IMM_VBO:
-         break;
-      case GLSM_CTL_UNSET_IMM_VBO:
-         break;
-      case GLSM_CTL_PROC_ADDRESS_GET:
-         {
-            glsm_ctx_proc_address_t *proc = (glsm_ctx_proc_address_t*)data;
-            if (!hw_render.get_proc_address)
-               return false;
-            proc->addr = hw_render.get_proc_address;
-         }
-         break;
-      case GLSM_CTL_STATE_CONTEXT_RESET:
-         rglgen_resolve_symbols(hw_render.get_proc_address);
-         break;
-      case GLSM_CTL_STATE_CONTEXT_DESTROY:
-         glsm_state_ctx_destroy(data);
-         break;
-      case GLSM_CTL_STATE_CONTEXT_INIT:
-         return glsm_state_ctx_init((glsm_ctx_params_t*)data);
-      case GLSM_CTL_STATE_SETUP:
-         glsm_state_setup();
-         break;
-      case GLSM_CTL_STATE_UNBIND:
-         glsm_state_unbind();
-         break;
-      case GLSM_CTL_STATE_BIND:
-         glsm_state_bind();
-         break;
-      case GLSM_CTL_NONE:
-      default:
-         break;
-   }
-
-   return true;
+  return true;
 }

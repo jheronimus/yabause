@@ -85,6 +85,102 @@ static rglgen_func_t soft_get_proc_address(const char *name) {
   return (rglgen_func_t)dlsym(RTLD_DEFAULT, name);
 }
 
+#ifdef __APPLE__
+/* macOS Metal-GL driver flags textures as "unloadable" if they have no
+ * backing storage or are uninitialized. We shim glTexImage2D and glBindTexture
+ * via CFLAGS, and we dynamically hook __rglgen_glTexStorage2D. */
+#undef glTexImage2D
+#undef glBindTexture
+#undef glGenTextures
+#undef glTexSubImage2D
+#undef glGetIntegerv
+#undef glBindBuffer
+extern void glTexImage2D(unsigned int target, int level, int internalformat,
+                         int width, int height, int border, unsigned int format,
+                         unsigned int type, const void *pixels);
+extern void glBindTexture(unsigned int target, unsigned int texture);
+extern void glGenTextures(int n, unsigned int *textures);
+extern void glTexSubImage2D(unsigned int target, int level, int xoffset,
+                            int yoffset, int width, int height,
+                            unsigned int format, unsigned int type,
+                            const void *pixels);
+extern void glGetIntegerv(unsigned int pname, int *data);
+extern void glBindBuffer(unsigned int target, unsigned int buffer);
+#define glTexImage2D yabause_glTexImage2D_shim
+#define glBindTexture yabause_glBindTexture_shim
+
+void yabause_glTexImage2D_shim(unsigned int target, int level,
+                               int internalformat, int width, int height,
+                               int border, unsigned int format,
+                               unsigned int type, const void *pixels) {
+  if (pixels == NULL && width > 0 && height > 0) {
+    size_t bpp = 4;
+    void *zeroes = calloc(width * height, bpp);
+    int old_unpack = 0;
+    glGetIntegerv(0x88EF /* GL_PIXEL_UNPACK_BUFFER_BINDING */, &old_unpack);
+    glBindBuffer(0x88EC /* GL_PIXEL_UNPACK_BUFFER */, 0);
+#undef glTexImage2D
+    glTexImage2D(target, level, internalformat, width, height, border, format,
+                 type, zeroes);
+#define glTexImage2D yabause_glTexImage2D_shim
+    glBindBuffer(0x88EC /* GL_PIXEL_UNPACK_BUFFER */, old_unpack);
+    free(zeroes);
+  } else {
+#undef glTexImage2D
+    glTexImage2D(target, level, internalformat, width, height, border, format,
+                 type, pixels);
+#define glTexImage2D yabause_glTexImage2D_shim
+  }
+}
+
+static unsigned int dummy_tex = 0;
+void yabause_glBindTexture_shim(unsigned int target, unsigned int texture) {
+  if (texture == 0 && target == 0x0DE1 /* GL_TEXTURE_2D */) {
+    if (dummy_tex == 0) {
+      glGenTextures(1, &dummy_tex);
+#undef glBindTexture
+      glBindTexture(0x0DE1, dummy_tex);
+#define glBindTexture yabause_glBindTexture_shim
+      int zero = 0;
+#undef glTexImage2D
+      glTexImage2D(0x0DE1, 0, 0x1908 /* GL_RGBA */, 1, 1, 0, 0x1908,
+                   0x1401 /* GL_UNSIGNED_BYTE */, &zero);
+#define glTexImage2D yabause_glTexImage2D_shim
+    } else {
+#undef glBindTexture
+      glBindTexture(0x0DE1, dummy_tex);
+#define glBindTexture yabause_glBindTexture_shim
+    }
+  } else {
+#undef glBindTexture
+    glBindTexture(target, texture);
+#define glBindTexture yabause_glBindTexture_shim
+  }
+}
+
+static void(APIENTRY *real_glTexStorage2D)(unsigned int target, int levels,
+                                           unsigned int internalformat,
+                                           int width, int height) = NULL;
+static void APIENTRY yabause_glTexStorage2D_shim(unsigned int target,
+                                                 int levels,
+                                                 unsigned int internalformat,
+                                                 int width, int height) {
+  if (real_glTexStorage2D)
+    real_glTexStorage2D(target, levels, internalformat, width, height);
+  if (width > 0 && height > 0 && target == 0x0DE1 /* GL_TEXTURE_2D */) {
+    size_t bpp = 4;
+    void *zeroes = calloc(width * height, bpp);
+    int old_unpack = 0;
+    glGetIntegerv(0x88EF /* GL_PIXEL_UNPACK_BUFFER_BINDING */, &old_unpack);
+    glBindBuffer(0x88EC /* GL_PIXEL_UNPACK_BUFFER */, 0);
+    glTexSubImage2D(target, 0, 0, 0, width, height, 0x1908 /* GL_RGBA */,
+                    0x1401 /* GL_UNSIGNED_BYTE */, zeroes);
+    glBindBuffer(0x88EC /* GL_PIXEL_UNPACK_BUFFER */, old_unpack);
+    free(zeroes);
+  }
+}
+#endif
+
 static bool libretro_supports_bitmasks = false;
 static int16_t libretro_input_bitmask[12] = {-1, -1, -1, -1, -1, -1,
                                              -1, -1, -1, -1, -1, -1};
@@ -550,6 +646,7 @@ void YabauseThread_setUseBios(int use) { (void)use; }
 
 void YabauseThread_setBackupPath(const char *buf) { (void)buf; }
 
+static bool yabause_initialized = false;
 void YabauseThread_coldBoot(void) {}
 
 void YabauseThread_resetPlaymode(void) {}
@@ -670,10 +767,17 @@ static void context_reset(void) {
 #if !defined(_USEGLEW_)
   glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESET, NULL);
   glsm_ctl(GLSM_CTL_STATE_SETUP, NULL);
+#ifdef __APPLE__
+  if (__rglgen_glTexStorage2D != (void *)yabause_glTexStorage2D_shim) {
+    real_glTexStorage2D = (void *)__rglgen_glTexStorage2D;
+    __rglgen_glTexStorage2D = (void *)yabause_glTexStorage2D_shim;
+  }
+#endif
 #endif
   if (first_ctx_reset == 1) {
     first_ctx_reset = 0;
     YabauseInit(&yinit);
+    yabause_initialized = true;
     renderer_running = true;
     retro_set_resolution();
     OSDChangeCore(OSDCORE_DUMMY);
@@ -768,6 +872,14 @@ void check_variables(void) {
     else if (strcmp(var.value, "gl") == 0)
       g_renderer_mode = 1;
   }
+
+#if defined(ARCH_IS_MACOSX) && ARCH_IS_MACOSX
+  // Apple's OpenGL implementation is capped at 4.1 and lacks Compute Shaders.
+  // The modern hardware renderer requires OpenGL 4.3 Compute Shaders and will
+  // abort(). Force software rendering on macOS to prevent crashes, regardless
+  // of user settings.
+  g_renderer_mode = 0;
+#endif
 
   var.key = "yabasanshiro_frameskip";
   var.value = NULL;
@@ -1072,6 +1184,7 @@ bool retro_load_game_common() {
       log_cb(RETRO_LOG_ERROR, "YabauseInit failed\n");
       return false;
     }
+    yabause_initialized = true;
     renderer_running = true;
     retro_set_resolution();
     OSDChangeCore(OSDCORE_DUMMY);
@@ -1406,9 +1519,12 @@ bool retro_load_game_special(unsigned game_type,
 }
 
 void retro_unload_game(void) {
-  if (!renderer_running)
-    VIDCore->Init();
-  YabauseDeInit();
+  if (yabause_initialized) {
+    if (!renderer_running)
+      VIDCore->Init();
+    YabauseDeInit();
+    yabause_initialized = false;
+  }
 }
 
 unsigned retro_get_region(void) { return RETRO_REGION_NTSC; }
@@ -1425,7 +1541,7 @@ void *retro_get_memory_data(unsigned id) {
 
 size_t retro_get_memory_size(unsigned id) {
   if (id == RETRO_MEMORY_SAVE_RAM)
-    return tweak_backup_file_size;
+    return BupRam ? tweak_backup_file_size : 0;
   return 0;
 }
 

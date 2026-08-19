@@ -279,6 +279,7 @@ else ifneq (,$(findstring osx,$(platform)))
 	# macOS: vendored zlib's gzlib.c/gzread.c call read/lseek/close without
 	# including <unistd.h>; force-include it (harmless elsewhere).
 	FLAGS += -include unistd.h
+	HAVE_SSE = 0
 	# macOS's desktop GL header lacks the KHR_debug names the core's
 	# _OGL3_ path uses; provide them for local builds.
 	FLAGS += -DGL_DEBUG_SOURCE_APPLICATION=0x824A -DGL_DEBUG_TYPE_ERROR=0x824C -DGL_DEBUG_SEVERITY_HIGH=0x9146
@@ -437,6 +438,10 @@ ifeq ($(ARCH_IS_LINUX), 1)
 endif
 
 ifeq ($(ARCH_IS_MACOSX), 1)
+	CFLAGS += -D_OGL3_ -DALLOW_POLYGON_MODE -DARCH_IS_MACOSX=1 -ffast-math
+	CXXFLAGS += -D_OGL3_ -DALLOW_POLYGON_MODE -DARCH_IS_MACOSX=1 -ffast-math
+	CFLAGS += -DglTexImage2D=yabause_glTexImage2D_shim -DglBindTexture=yabause_glBindTexture_shim -include unistd.h
+	CXXFLAGS += -DglTexImage2D=yabause_glTexImage2D_shim -DglBindTexture=yabause_glBindTexture_shim -include unistd.h
 	FLAGS += -DARCH_IS_MACOSX=1
 endif
 
