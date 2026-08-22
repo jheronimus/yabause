@@ -583,9 +583,15 @@ void YglTmPush(YglTextureManager * tm){
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tm->textureID_in[tm->current] );
   if (tm->texture != NULL ) {
+    /* Panfrost rejects partial-height TexSubImage2D sourced from a
+       pixel-unpack buffer with GL_INVALID_OPERATION on AFBC-backed
+       textures; the rejected upload poisons the buffer and the next
+       YglTmPull map fails, which aborts the emulator. Upload the whole
+       store instead - rows past yMax are never sampled. */
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, tm->pixelBufferID_in[tm->current] );
     glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tm->width, tm->yMax, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tm->width, tm->height, GL_RGBA,
+                    GL_UNSIGNED_BYTE, 0);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
     tm->texture = NULL;
   }
@@ -605,9 +611,22 @@ void YglTmPull(YglTextureManager * tm, u32 flg){
       tm->texture_in[tm->current] = (int*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, tm->width * tm->height * 4, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
     }
     if (tm->texture_in[tm->current] == NULL) {
+      /* Self-heal instead of dying: re-create the store and retry once.
+         The buffer is write-only staging, so zeroed contents are fine.
+         See the AFBC note in YglTmPush for how this state is reached. */
       int error = glGetError();
-      YGLLOG("Fail to glMapBufferRange %X", error );
-      abort();
+      fprintf(stderr, "YGLTM mapfail err=%X buf=%u - recreating store\n", error,
+              tm->pixelBufferID_in[tm->current]);
+      glBufferData(GL_PIXEL_UNPACK_BUFFER, tm->width * tm->height * 4, NULL,
+                   GL_DYNAMIC_DRAW);
+      glGetError();
+      tm->texture_in[tm->current] =
+          (int *)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0,
+                                  tm->width * tm->height * 4,
+                                  GL_MAP_WRITE_BIT |
+                                      GL_MAP_INVALIDATE_BUFFER_BIT);
+      if (tm->texture_in[tm->current] == NULL)
+        abort();
     }
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 /*
