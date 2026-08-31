@@ -614,9 +614,8 @@ CDInterface *CDCoreList[] = {&DummyCD, &ISOCD, NULL};
 
 SoundInterface_struct *SNDCoreList[] = {&SNDDummy, &SNDLIBRETRO, NULL};
 
-VideoInterface_struct *VIDCoreList[] = {
-    //&VIDDummy,
-    &VIDOGL, &VIDSoft, NULL};
+VideoInterface_struct *VIDCoreList[] = {//&VIDDummy,
+                                        &VIDOGL, &VIDSoft, NULL};
 
 #pragma mark Yabause Callbacks
 
