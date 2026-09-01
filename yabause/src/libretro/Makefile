@@ -129,10 +129,11 @@ else ifeq ($(platform), arm64)
 	TARGET := $(TARGET_NAME)_libretro.so
 	fpic := -fPIC
 	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=link.T
-	LDFLAGS += -lpthread -lGL
+	LDFLAGS += -lpthread
 	FLAGS +=  -DAARCH64
 	ARCH_IS_LINUX = 1
 	HAVE_SSE = 0
+	FORCE_GLES = 1
 	USE_AARCH64_DRC = 1
 	DYNAREC_DEVMIYAX = 1
 	ALLOW_POLYGON_MODE = 0
